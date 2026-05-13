@@ -1,0 +1,496 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3DF70F161111D0B812011356 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CDFB7B8DBDAC366B35D44B /* AppDelegate.swift */; };
+		81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */; };
+		A22F8B5790DDF41DCF8C477A /* NovaClipboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF59BF63DC699D64BBBFF1A2 /* NovaClipboardTests.swift */; };
+		AF8CF91FC1F453A70416C35F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 42E7E7CDDB49F0905727B7BF /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1F909475E63FC24DB562AA9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3FA987360BFF329A0531DF10 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4BE40A0991DE5521AE8601DA;
+			remoteInfo = NovaClipboard;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		42E7E7CDDB49F0905727B7BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9B45EAEDC4F65268F9C0891E /* NovaClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NovaClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NovaClipboardApp.swift; sourceTree = "<group>"; };
+		B6CDFB7B8DBDAC366B35D44B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		DF59BF63DC699D64BBBFF1A2 /* NovaClipboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NovaClipboardTests.swift; sourceTree = "<group>"; };
+		DF95A37032D7AE660B825C15 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F241ED3463525A2120CD596E /* NovaClipboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NovaClipboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0717AFD05F9AEC2C5905455F /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				12EAAD623A832D511CC67278 /* History */,
+				727EDE368AF89536B396F420 /* Onboarding */,
+				3EBDDB05A4EEB5371B0E9B82 /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		12EAAD623A832D511CC67278 /* History */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = History;
+			sourceTree = "<group>";
+		};
+		16086912F0D09FEC83AD73F5 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		2A45785BDA2E0F2771F6687C /* NovaClipboard */ = {
+			isa = PBXGroup;
+			children = (
+				75430E0ABA19F7662C44CF62 /* App */,
+				0717AFD05F9AEC2C5905455F /* Features */,
+				DFC84B5E637E8E3D51A667B5 /* Models */,
+				2AE8B9D7CC4BCC9FB4D8E491 /* Resources */,
+				D38E5C9D875C2F7759CF8427 /* Services */,
+				16086912F0D09FEC83AD73F5 /* Utilities */,
+			);
+			path = NovaClipboard;
+			sourceTree = "<group>";
+		};
+		2AE8B9D7CC4BCC9FB4D8E491 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				42E7E7CDDB49F0905727B7BF /* Assets.xcassets */,
+				DF95A37032D7AE660B825C15 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		3EBDDB05A4EEB5371B0E9B82 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		727EDE368AF89536B396F420 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		7325FAB8E0385538336EB7AE /* NovaClipboardTests */ = {
+			isa = PBXGroup;
+			children = (
+				DF59BF63DC699D64BBBFF1A2 /* NovaClipboardTests.swift */,
+			);
+			path = NovaClipboardTests;
+			sourceTree = "<group>";
+		};
+		75430E0ABA19F7662C44CF62 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B6CDFB7B8DBDAC366B35D44B /* AppDelegate.swift */,
+				B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AA3B1BD866BD93929842A5A0 = {
+			isa = PBXGroup;
+			children = (
+				2A45785BDA2E0F2771F6687C /* NovaClipboard */,
+				7325FAB8E0385538336EB7AE /* NovaClipboardTests */,
+				BE91AB9115A888D8EB2B1F10 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BE91AB9115A888D8EB2B1F10 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9B45EAEDC4F65268F9C0891E /* NovaClipboard.app */,
+				F241ED3463525A2120CD596E /* NovaClipboardTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D38E5C9D875C2F7759CF8427 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		DFC84B5E637E8E3D51A667B5 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4BE40A0991DE5521AE8601DA /* NovaClipboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D03D9A080A9BD0DFC575E41F /* Build configuration list for PBXNativeTarget "NovaClipboard" */;
+			buildPhases = (
+				69D0CBA8259CD9A0536CEB1F /* Sources */,
+				22EC7EE45C9758E1C2BCA9D4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NovaClipboard;
+			packageProductDependencies = (
+			);
+			productName = NovaClipboard;
+			productReference = 9B45EAEDC4F65268F9C0891E /* NovaClipboard.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C1FFA4D05803F96ABCF6C4A3 /* NovaClipboardTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A64BEC6EF915BD3D7AFDB1EE /* Build configuration list for PBXNativeTarget "NovaClipboardTests" */;
+			buildPhases = (
+				ACCEAC62CE487D917696E13E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8C0EA6D034D1A8729061DC81 /* PBXTargetDependency */,
+			);
+			name = NovaClipboardTests;
+			packageProductDependencies = (
+			);
+			productName = NovaClipboardTests;
+			productReference = F241ED3463525A2120CD596E /* NovaClipboardTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3FA987360BFF329A0531DF10 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					4BE40A0991DE5521AE8601DA = {
+						ProvisioningStyle = Automatic;
+					};
+					C1FFA4D05803F96ABCF6C4A3 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 9A0289105D209CAF684B141D /* Build configuration list for PBXProject "NovaClipboard" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = AA3B1BD866BD93929842A5A0;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = BE91AB9115A888D8EB2B1F10 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4BE40A0991DE5521AE8601DA /* NovaClipboard */,
+				C1FFA4D05803F96ABCF6C4A3 /* NovaClipboardTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		22EC7EE45C9758E1C2BCA9D4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF8CF91FC1F453A70416C35F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		69D0CBA8259CD9A0536CEB1F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3DF70F161111D0B812011356 /* AppDelegate.swift in Sources */,
+				81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACCEAC62CE487D917696E13E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A22F8B5790DDF41DCF8C477A /* NovaClipboardTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		8C0EA6D034D1A8729061DC81 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4BE40A0991DE5521AE8601DA /* NovaClipboard */;
+			targetProxy = A1F909475E63FC24DB562AA9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		06B2EC246F9623DAB2939090 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboard;
+				PRODUCT_NAME = NovaClipboard;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		64774A5E3DC44D1E26B3026B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboardTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NovaClipboard.app/Contents/MacOS/NovaClipboard";
+			};
+			name = Release;
+		};
+		84697B7121732463CE54A616 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboard;
+				PRODUCT_NAME = NovaClipboard;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		B247635E33BF25342B2CEEC7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		C90839D072AE8FF60B7BBC55 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		E428535FC33A3DAF4C27F497 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboardTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NovaClipboard.app/Contents/MacOS/NovaClipboard";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9A0289105D209CAF684B141D /* Build configuration list for PBXProject "NovaClipboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B247635E33BF25342B2CEEC7 /* Debug */,
+				C90839D072AE8FF60B7BBC55 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A64BEC6EF915BD3D7AFDB1EE /* Build configuration list for PBXNativeTarget "NovaClipboardTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E428535FC33A3DAF4C27F497 /* Debug */,
+				64774A5E3DC44D1E26B3026B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D03D9A080A9BD0DFC575E41F /* Build configuration list for PBXNativeTarget "NovaClipboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				06B2EC246F9623DAB2939090 /* Debug */,
+				84697B7121732463CE54A616 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3FA987360BFF329A0531DF10 /* Project object */;
+}
