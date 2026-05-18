@@ -2,7 +2,7 @@ name: NovaClipboard
 options:
   bundleIdPrefix: io.creativeforce
   deploymentTarget:
-    macOS: "13.0"
+    macOS: "14.0"
   developmentLanguage: en
   createIntermediateGroups: true
   generateEmptyDirectories: true
@@ -20,7 +20,7 @@ targets:
   NovaClipboard:
     type: application
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "14.0"
     sources:
       - path: NovaClipboard
         excludes:
@@ -43,7 +43,7 @@ targets:
   NovaClipboardTests:
     type: bundle.unit-test
     platform: macOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "14.0"
     sources:
       - path: NovaClipboardTests
     dependencies:
