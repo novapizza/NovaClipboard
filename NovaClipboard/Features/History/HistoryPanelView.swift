@@ -52,37 +52,34 @@ struct HistoryPanelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SearchBar(query: $query, isFocused: $searchFocused)
-                .padding(.horizontal, 10)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-
-            FilterChipsBar(filter: $filter)
-                .padding(.horizontal, 10)
-                .padding(.bottom, 4)
-
-            Divider()
+            // TEMP: search & filter chips hidden — panel always shows "All".
+            // SearchBar(query: $query, isFocused: $searchFocused)
+            //     .padding(.horizontal, 10)
+            //     .padding(.top, 8)
+            //     .padding(.bottom, 4)
+            //
+            // FilterChipsBar(filter: $filter)
+            //     .padding(.horizontal, 10)
+            //     .padding(.bottom, 4)
+            //
+            // Divider()
 
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        if !pinnedItems.isEmpty && shouldShowPinnedSection {
-                            sectionHeader("Pinned")
-                            ForEach(Array(pinnedItems.enumerated()), id: \.element.persistentModelID) { _, item in
-                                row(for: item, quickIdx: nil)
+                        let pinnedCount = pinnedItems.count
+                        ForEach(Array(visibleItems.enumerated()), id: \.element.persistentModelID) { idx, item in
+                            if shouldShowPinnedSection && pinnedCount > 0 {
+                                if idx == 0 {
+                                    sectionHeader("Pinned")
+                                } else if idx == pinnedCount && !recentItems.isEmpty {
+                                    sectionHeader("Recent")
+                                }
                             }
+                            row(for: item, quickIdx: idx)
                         }
 
-                        if !recentItems.isEmpty {
-                            if !pinnedItems.isEmpty && shouldShowPinnedSection {
-                                sectionHeader("Recent")
-                            }
-                            ForEach(Array(recentItems.enumerated()), id: \.element.persistentModelID) { idx, item in
-                                row(for: item, quickIdx: idx)
-                            }
-                        }
-
-                        if pinnedItems.isEmpty && recentItems.isEmpty {
+                        if visibleItems.isEmpty {
                             VStack {
                                 Spacer(minLength: 40)
                                 Text(query.isEmpty ? "No clipboard items yet" : "No matches")
@@ -92,7 +89,8 @@ struct HistoryPanelView: View {
                             .frame(maxWidth: .infinity)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
                 }
                 .onChange(of: selectedID) { _, newValue in
                     guard let newValue else { return }
@@ -126,10 +124,10 @@ struct HistoryPanelView: View {
 
     private var statusBar: some View {
         HStack(spacing: 12) {
-            Text("↑↓ chọn")
-            Text("↵ dán")
-            Text("⌘P ghim")
-            Text("⌫ xóa")
+            Text("↑↓ Select")
+            Text("↵ Paste")
+            Text("⌘P Pin")
+            Text("⌫ Delete")
             Spacer()
             Text("\(visibleItems.count)")
                 .foregroundStyle(.secondary)
@@ -156,7 +154,9 @@ struct HistoryPanelView: View {
         HistoryItemRow(
             item: item,
             isSelected: item.persistentModelID == selectedID,
-            quickPasteIndex: quickIdx
+            quickPasteIndex: quickIdx,
+            onTogglePin: { togglePin(for: item) },
+            onDelete: { delete(item) }
         )
         .id(item.persistentModelID)
         .contentShape(Rectangle())
@@ -247,20 +247,28 @@ struct HistoryPanelView: View {
     }
 
     private func quickPaste(index: Int) {
-        // index is 0..8 (⌘1..⌘9). Quick-paste targets the "Recent" rows shown in the panel.
-        let items = recentItems
+        // index is 0..8 (⌘1..⌘9). Maps to the visible row in order (pinned first, then recent).
+        let items = visibleItems
         guard index < items.count else { return }
         onPaste(items[index])
     }
 
     private func togglePin() {
         guard let item = currentItem() else { return }
+        togglePin(for: item)
+    }
+
+    private func togglePin(for item: ClipboardItem) {
         item.isPinned.toggle()
         try? modelContext.save()
     }
 
     private func deleteSelected() {
         guard let item = currentItem() else { return }
+        delete(item)
+    }
+
+    private func delete(_ item: ClipboardItem) {
         ImageStore.deleteFile(at: item.imagePath)
         ImageThumbnailCache.shared.invalidate(id: item.id)
         modelContext.delete(item)
@@ -402,11 +410,11 @@ private final class KeyCaptureView: NSView {
             return
         }
 
-        // ⌘F focus search
-        if cmd, event.charactersIgnoringModifiers == "f" {
-            actions.onFocusSearch()
-            return
-        }
+        // TEMP: ⌘F focus search disabled while the search bar is hidden.
+        // if cmd, event.charactersIgnoringModifiers == "f" {
+        //     actions.onFocusSearch()
+        //     return
+        // }
 
         // ⌘P toggle pin
         if cmd, event.charactersIgnoringModifiers == "p" {

@@ -5,6 +5,10 @@ struct HistoryItemRow: View {
     let item: ClipboardItem
     let isSelected: Bool
     var quickPasteIndex: Int?
+    var onTogglePin: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
+
+    @State private var isHovered: Bool = false
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
@@ -18,26 +22,14 @@ struct HistoryItemRow: View {
                 .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 2) {
-                if item.isPinned {
-                    HStack(spacing: 4) {
-                        Image(systemName: "pin.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                        Text(item.preview)
-                            .lineLimit(2)
-                            .font(item.type == .text ? .body : .body.monospaced())
-                    }
-                } else {
-                    Text(item.preview)
-                        .lineLimit(2)
-                        .font(item.type == .text ? .body : .body.monospaced())
-                }
-
-                Text(Self.relativeFormatter.localizedString(for: item.createdAt, relativeTo: Date()))
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Text(item.preview)
+                    .lineLimit(2)
+                    .font(item.type == .text ? .body : .body.monospaced())
             }
             Spacer(minLength: 0)
+
+            pinButton
+            deleteButton
 
             if let quickPasteIndex, quickPasteIndex < 9 {
                 Text("⌘\(quickPasteIndex + 1)")
@@ -58,10 +50,47 @@ struct HistoryItemRow: View {
                 .fill(isSelected ? Color.accentColor.opacity(0.22) : .clear)
         )
         .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
         .accessibilityHint("Press return to paste")
+    }
+
+    @ViewBuilder
+    private var pinButton: some View {
+        if let onTogglePin {
+            let shouldShow = item.isPinned || isHovered || isSelected
+            Button(action: onTogglePin) {
+                Image(systemName: item.isPinned ? "pin.fill" : "pin")
+                    .font(.caption)
+                    .foregroundStyle(item.isPinned ? .orange : .secondary)
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .opacity(shouldShow ? 1 : 0)
+            .accessibilityLabel(item.isPinned ? "Unpin item" : "Pin item")
+            .help(item.isPinned ? "Unpin" : "Pin")
+        }
+    }
+
+    @ViewBuilder
+    private var deleteButton: some View {
+        if let onDelete {
+            let shouldShow = isHovered || isSelected
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .opacity(shouldShow ? 1 : 0)
+            .accessibilityLabel("Delete item")
+            .help("Delete")
+        }
     }
 
     private var accessibilityDescription: String {
