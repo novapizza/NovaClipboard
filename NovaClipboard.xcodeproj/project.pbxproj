@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		05AEDDF5D6F491EECD68F194 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8FC1DDF0A47440AB182F567 /* HistoryStore.swift */; };
+		10442D53F4349C0CAD5958A7 /* ImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82112A46989E8A9859481866 /* ImageStore.swift */; };
+		11A220002A8169EC0D814480 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */; };
 		1BDE88B884FB4AF774817301 /* PanelAnchorResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D684E753FF1631572276716A /* PanelAnchorResolver.swift */; };
 		3DF70F161111D0B812011356 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CDFB7B8DBDAC366B35D44B /* AppDelegate.swift */; };
 		4DEC66CB9658B1E5DFB8AD2B /* PanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFF0194B8B583443AF9DE740 /* PanelController.swift */; };
@@ -15,8 +17,11 @@
 		5E5300685781376CF1201021 /* HistoryItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */; };
 		654A93111DD1CBD097094D5D /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894927E657A5FDDB08FA977D /* ClipboardItem.swift */; };
 		7198F76F53036F6C71C99EBF /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DF00C7E8C96D8ABB8A88CD /* HotKeyManager.swift */; };
+		77AF6D1F3E0C4F667864B5BD /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905BB92C1BB6730E852D92C3 /* PermissionsView.swift */; };
 		81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */; };
+		855F998A7279FCFAB5176016 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966F4876CA9F2BCE21EFA23D /* AppSettings.swift */; };
 		882186C13BA4A6A35F055CE0 /* HistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995E042E52580CF288E1D553 /* HistoryStoreTests.swift */; };
+		959BF62D8F748012C165895A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C700689EA6D9F9B589172E /* SettingsView.swift */; };
 		9D8A65512D39D294FBD79D59 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB8F9DB85B2BFEAD1D19D4A2 /* ClipboardMonitor.swift */; };
 		A22F8B5790DDF41DCF8C477A /* NovaClipboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF59BF63DC699D64BBBFF1A2 /* NovaClipboardTests.swift */; };
 		AF8CF91FC1F453A70416C35F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 42E7E7CDDB49F0905727B7BF /* Assets.xcassets */; };
@@ -41,12 +46,17 @@
 		1D846BACDA5C11B67B740EF1 /* PasteEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteEngine.swift; sourceTree = "<group>"; };
 		41DF00C7E8C96D8ABB8A88CD /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		42E7E7CDDB49F0905727B7BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryItemRow.swift; sourceTree = "<group>"; };
+		82112A46989E8A9859481866 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
 		894927E657A5FDDB08FA977D /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		8E983524F663810FD4E66441 /* HistoryPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPanelView.swift; sourceTree = "<group>"; };
+		905BB92C1BB6730E852D92C3 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
+		966F4876CA9F2BCE21EFA23D /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		995E042E52580CF288E1D553 /* HistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStoreTests.swift; sourceTree = "<group>"; };
 		9AD8F6638AD67BC883E1216A /* ChecksumTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecksumTests.swift; sourceTree = "<group>"; };
 		9B45EAEDC4F65268F9C0891E /* NovaClipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NovaClipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5C700689EA6D9F9B589172E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NovaClipboardApp.swift; sourceTree = "<group>"; };
 		B6CDFB7B8DBDAC366B35D44B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C2839AAA4769A6D20370FAE5 /* Checksum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Checksum.swift; sourceTree = "<group>"; };
@@ -85,6 +95,8 @@
 			isa = PBXGroup;
 			children = (
 				C2839AAA4769A6D20370FAE5 /* Checksum.swift */,
+				82112A46989E8A9859481866 /* ImageStore.swift */,
+				46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -114,6 +126,7 @@
 		3EBDDB05A4EEB5371B0E9B82 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				A5C700689EA6D9F9B589172E /* SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -121,6 +134,7 @@
 		727EDE368AF89536B396F420 /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
+				905BB92C1BB6730E852D92C3 /* PermissionsView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -179,6 +193,7 @@
 		DFC84B5E637E8E3D51A667B5 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				966F4876CA9F2BCE21EFA23D /* AppSettings.swift */,
 				894927E657A5FDDB08FA977D /* ClipboardItem.swift */,
 				CDB1138540629F3296E37191 /* KeyCombo.swift */,
 			);
@@ -233,9 +248,6 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
-					4BE40A0991DE5521AE8601DA = {
-						ProvisioningStyle = Automatic;
-					};
 					C1FFA4D05803F96ABCF6C4A3 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -278,6 +290,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3DF70F161111D0B812011356 /* AppDelegate.swift in Sources */,
+				855F998A7279FCFAB5176016 /* AppSettings.swift in Sources */,
 				EC227B2F00F0B304BAEFAA14 /* Checksum.swift in Sources */,
 				654A93111DD1CBD097094D5D /* ClipboardItem.swift in Sources */,
 				9D8A65512D39D294FBD79D59 /* ClipboardMonitor.swift in Sources */,
@@ -285,11 +298,15 @@
 				FD0B2B22F9390C7851AFC264 /* HistoryPanelView.swift in Sources */,
 				05AEDDF5D6F491EECD68F194 /* HistoryStore.swift in Sources */,
 				7198F76F53036F6C71C99EBF /* HotKeyManager.swift in Sources */,
+				10442D53F4349C0CAD5958A7 /* ImageStore.swift in Sources */,
 				58E2F4282B67437B349A840C /* KeyCombo.swift in Sources */,
+				11A220002A8169EC0D814480 /* LaunchAtLogin.swift in Sources */,
 				81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */,
 				1BDE88B884FB4AF774817301 /* PanelAnchorResolver.swift in Sources */,
 				4DEC66CB9658B1E5DFB8AD2B /* PanelController.swift in Sources */,
 				BBD62C044985E1F5EEB3918C /* PasteEngine.swift in Sources */,
+				77AF6D1F3E0C4F667864B5BD /* PermissionsView.swift in Sources */,
+				959BF62D8F748012C165895A /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,7 +337,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -330,6 +349,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboard;
 				PRODUCT_NAME = NovaClipboard;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -357,7 +377,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -367,6 +389,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboard;
 				PRODUCT_NAME = NovaClipboard;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 			};
 			name = Release;

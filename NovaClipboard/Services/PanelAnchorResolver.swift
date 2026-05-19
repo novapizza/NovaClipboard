@@ -16,13 +16,37 @@ enum PanelPositionPreference: String, Codable {
 
 final class PanelAnchorResolver {
     private static let axMessagingTimeout: Float = 0.030
+
+    /// Apps where AX caret/element queries are known to be unreliable or absent.
+    /// Preloaded at init; additional broken bundles get appended during the session.
+    private static let defaultBrokenBundleIDs: Set<String> = [
+        "com.googlecode.iterm2",
+        "com.apple.Terminal",
+        "com.mitchellh.ghostty",
+        "com.jetbrains.intellij",
+        "com.jetbrains.intellij.ce",
+        "com.jetbrains.pycharm",
+        "com.jetbrains.pycharm.ce",
+        "com.jetbrains.webstorm",
+        "com.jetbrains.goland",
+        "com.jetbrains.rubymine",
+        "com.jetbrains.clion",
+        "com.jetbrains.rider",
+        "com.jetbrains.AppCode"
+    ]
+
+    private static let jetbrainsPrefix = "com.jetbrains."
+
     private let systemWide: AXUIElement
-    private var brokenBundleIDs: Set<String> = []
+    private var brokenBundleIDs: Set<String>
+
+    var fixedOrigin: CGPoint = .zero
 
     init() {
         let element = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(element, PanelAnchorResolver.axMessagingTimeout)
         self.systemWide = element
+        self.brokenBundleIDs = PanelAnchorResolver.defaultBrokenBundleIDs
     }
 
     func resolve(preference: PanelPositionPreference = .atCaret) -> PanelAnchor {
@@ -30,7 +54,7 @@ final class PanelAnchorResolver {
         case .atMouse:
             return .mouse(NSEvent.mouseLocation)
         case .fixed:
-            return .fixed(NSEvent.mouseLocation)
+            return .fixed(fixedOrigin)
         case .atCaret:
             return resolveAtCaret()
         }
@@ -38,7 +62,7 @@ final class PanelAnchorResolver {
 
     private func resolveAtCaret() -> PanelAnchor {
         let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        if let bundleID, brokenBundleIDs.contains(bundleID) {
+        if let bundleID, isBroken(bundleID) {
             return .mouse(NSEvent.mouseLocation)
         }
 
@@ -57,6 +81,12 @@ final class PanelAnchorResolver {
 
         if let bundleID { brokenBundleIDs.insert(bundleID) }
         return .mouse(NSEvent.mouseLocation)
+    }
+
+    private func isBroken(_ bundleID: String) -> Bool {
+        if brokenBundleIDs.contains(bundleID) { return true }
+        if bundleID.hasPrefix(PanelAnchorResolver.jetbrainsPrefix) { return true }
+        return false
     }
 
     private func focusedElement() -> AXUIElement? {

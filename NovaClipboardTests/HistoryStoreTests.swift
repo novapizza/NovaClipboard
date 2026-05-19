@@ -66,4 +66,54 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(remaining.count, 1)
         XCTAssertEqual(remaining.first?.preview, "important")
     }
+
+    func testTogglePinFlipsFlag() {
+        let item = store.insert(ClipboardItem.text("toggle-me"))
+        XCTAssertFalse(item.isPinned)
+        store.togglePin(item)
+        XCTAssertTrue(item.isPinned)
+        store.togglePin(item)
+        XCTAssertFalse(item.isPinned)
+    }
+
+    func testPinnedSurvivesLimitEviction() {
+        let limited = HistoryStore(context: container.mainContext, limit: 5)
+        let pinned = limited.insert(ClipboardItem.text("keeper"))
+        limited.togglePin(pinned)
+        for i in 0..<10 {
+            limited.insert(ClipboardItem.text("noise-\(i)"))
+        }
+        let all = limited.fetchAll()
+        XCTAssertTrue(all.contains(where: { $0.preview == "keeper" && $0.isPinned }))
+        XCTAssertEqual(all.filter { !$0.isPinned }.count, 5)
+    }
+
+    func testSearchByQuery() {
+        store.insert(ClipboardItem.text("apple banana"))
+        store.insert(ClipboardItem.text("hello world"))
+        store.insert(ClipboardItem.text("apple pie"))
+
+        let results = store.search(query: "apple")
+        XCTAssertEqual(results.count, 2)
+        XCTAssertTrue(results.allSatisfy { $0.preview.contains("apple") })
+    }
+
+    func testSearchByType() {
+        store.insert(ClipboardItem.text("just text"))
+        store.insert(ClipboardItem.link("https://example.com"))
+
+        let links = store.search(query: "", type: .link)
+        XCTAssertEqual(links.count, 1)
+        XCTAssertEqual(links.first?.type, .link)
+    }
+
+    func testSearchPinnedOnly() {
+        let pinned = store.insert(ClipboardItem.text("important"))
+        store.togglePin(pinned)
+        store.insert(ClipboardItem.text("not important"))
+
+        let result = store.search(query: "", pinnedOnly: true)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.preview, "important")
+    }
 }

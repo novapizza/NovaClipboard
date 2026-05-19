@@ -11,6 +11,7 @@ final class PanelController {
 
     private let modelContainer: ModelContainer
     private let anchorResolver: PanelAnchorResolver
+    private let settings: AppSettings
     private let onPaste: (ClipboardItem) -> Void
     private var panel: NSPanel?
     private var capturedApp: NSRunningApplication?
@@ -18,10 +19,12 @@ final class PanelController {
     init(
         modelContainer: ModelContainer,
         anchorResolver: PanelAnchorResolver,
+        settings: AppSettings,
         onPaste: @escaping (ClipboardItem) -> Void
     ) {
         self.modelContainer = modelContainer
         self.anchorResolver = anchorResolver
+        self.settings = settings
         self.onPaste = onPaste
     }
 
@@ -43,7 +46,8 @@ final class PanelController {
         let panel = panel ?? makePanel()
         self.panel = panel
 
-        let anchor = anchorResolver.resolve(preference: .atCaret)
+        anchorResolver.fixedOrigin = settings.fixedPanelOrigin
+        let anchor = anchorResolver.resolve(preference: settings.panelPosition)
         let screen = currentScreen(for: anchor)
         let origin = anchor.panelOrigin(panelSize: PanelController.panelSize, screen: screen)
         panel.setFrameOrigin(origin)

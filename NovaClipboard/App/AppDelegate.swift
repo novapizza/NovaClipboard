@@ -1,11 +1,14 @@
 import AppKit
+import Combine
 import SwiftData
+import SwiftUI
 import os
 
 private let appLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "AppDelegate")
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let settings = AppSettings.shared
     private var statusItem: NSStatusItem?
     private var modelContainer: ModelContainer?
     private var historyStore: HistoryStore?
@@ -14,20 +17,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let anchorResolver = PanelAnchorResolver()
     private let pasteEngine = PasteEngine()
     private var panelController: PanelController?
+    private var settingsWindow: NSWindow?
+    private var onboardingWindow: NSWindow?
+    private var retentionTimer: Timer?
+    private var cancellables: Set<AnyCancellable> = []
+    private var permissionMonitorTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        appLogger.info("NovaClipboard launched build=paste-debug-1")
+        appLogger.info("NovaClipboard launching, phase-2 build")
         setupModelContainer()
         setupStatusItem()
         setupPanelController()
-        setupHotKey()
         setupClipboardMonitor()
+        setupSettingsBindings()
+        applyHotKey()
+        applyHistoryLimit()
+        startRetentionSweep()
+        startPermissionMonitor()
+
+        if !settings.hasOnboarded || !AXIsProcessTrusted() {
+            showOnboarding()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         clipboardMonitor?.stop()
         hotKeyManager.unregister()
+        retentionTimer?.invalidate()
+        permissionMonitorTimer?.invalidate()
     }
+
+    // MARK: - Setup
 
     private func setupModelContainer() {
         do {
@@ -35,7 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             let container = try ModelContainer(for: schema, configurations: [config])
             modelContainer = container
-            historyStore = HistoryStore(context: container.mainContext)
+            historyStore = HistoryStore(context: container.mainContext, limit: settings.maxItems)
         } catch {
             NSLog("Failed to create ModelContainer: \(error)")
         }
@@ -44,16 +64,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            let image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "NovaClipboard")
-            image?.isTemplate = true
-            button.image = image
+            updateStatusIcon(button: button)
         }
 
         let menu = NSMenu()
         let showItem = NSMenuItem(title: "Show History", action: #selector(togglePanel), keyEquivalent: "")
         showItem.target = self
         menu.addItem(showItem)
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         menu.addItem(NSMenuItem.separator())
+
+        let clearItem = NSMenuItem(title: "Clear All (keep pinned)", action: #selector(clearAll), keyEquivalent: "")
+        clearItem.target = self
+        menu.addItem(clearItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(title: "Quit NovaClipboard", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
@@ -62,11 +92,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
     }
 
+    private func updateStatusIcon(button: NSStatusBarButton) {
+        let symbolName = AXIsProcessTrusted() ? "doc.on.clipboard" : "exclamationmark.triangle"
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "NovaClipboard")
+        image?.isTemplate = AXIsProcessTrusted()
+        button.image = image
+    }
+
     private func setupPanelController() {
         guard let modelContainer else { return }
         panelController = PanelController(
             modelContainer: modelContainer,
             anchorResolver: anchorResolver,
+            settings: settings,
             onPaste: { [weak self] item in
                 guard let self else { return }
                 let target = self.panelController?.frontmostAppBeforeShow
@@ -76,28 +114,145 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    private func setupHotKey() {
-        hotKeyManager.register(keyCombo: .defaultShowPanel) { [weak self] in
-            self?.panelController?.toggle()
-        }
-    }
-
     private func setupClipboardMonitor() {
         let monitor = ClipboardMonitor()
         monitor.onNewItem = { [weak self] item in
             MainActor.assumeIsolated {
-                self?.historyStore?.insert(item)
+                guard let self else { return }
+                // Filter by privacy blocklist
+                if let src = item.sourceBundleID,
+                   self.settings.blocklistBundleIDs.contains(src) {
+                    appLogger.info("Skipping item from blocked bundle: \(src, privacy: .public)")
+                    ImageStore.deleteFile(at: item.imagePath)
+                    return
+                }
+                self.historyStore?.insert(item)
             }
         }
         monitor.start()
         clipboardMonitor = monitor
     }
 
+    private func setupSettingsBindings() {
+        settings.$hotKey
+            .dropFirst()
+            .sink { [weak self] _ in self?.applyHotKey() }
+            .store(in: &cancellables)
+
+        settings.$maxItems
+            .dropFirst()
+            .sink { [weak self] _ in self?.applyHistoryLimit() }
+            .store(in: &cancellables)
+
+        settings.$retention
+            .dropFirst()
+            .sink { [weak self] _ in self?.runRetentionSweep() }
+            .store(in: &cancellables)
+    }
+
+    private func applyHotKey() {
+        hotKeyManager.register(keyCombo: settings.hotKey) { [weak self] in
+            self?.panelController?.toggle()
+        }
+    }
+
+    private func applyHistoryLimit() {
+        historyStore?.limit = settings.maxItems
+    }
+
+    private func startRetentionSweep() {
+        runRetentionSweep()
+        // Re-run every hour for retention enforcement.
+        let timer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.runRetentionSweep() }
+        }
+        retentionTimer = timer
+    }
+
+    private func runRetentionSweep() {
+        guard let cutoff = settings.retention.seconds,
+              let store = historyStore else { return }
+        let threshold = Date().addingTimeInterval(-cutoff)
+        let items = store.fetchAll()
+        for item in items where !item.isPinned && item.createdAt < threshold {
+            store.delete(item)
+        }
+    }
+
+    private func startPermissionMonitor() {
+        let timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let button = self.statusItem?.button else { return }
+                self.updateStatusIcon(button: button)
+            }
+        }
+        permissionMonitorTimer = timer
+    }
+
+    // MARK: - Menu actions
+
     @objc private func togglePanel() {
         panelController?.toggle()
+    }
+
+    @objc private func openSettings() {
+        if let win = settingsWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
+            return
+        }
+        let host = NSHostingController(rootView: SettingsView(settings: settings))
+        let win = NSWindow(contentViewController: host)
+        win.title = "NovaClipboard Settings"
+        win.styleMask = [.titled, .closable, .miniaturizable]
+        win.isReleasedWhenClosed = false
+        win.center()
+        win.delegate = SettingsWindowDelegate.shared
+        settingsWindow = win
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func clearAll() {
+        historyStore?.clearAll(keepPinned: true)
     }
 
     @objc private func quit() {
         NSApp.terminate(nil)
     }
+
+    // MARK: - Onboarding
+
+    private func showOnboarding() {
+        if let win = onboardingWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            win.makeKeyAndOrderFront(nil)
+            return
+        }
+        let host = NSHostingController(rootView: PermissionsView { [weak self] in
+            self?.completeOnboarding()
+        })
+        let win = NSWindow(contentViewController: host)
+        win.title = "Welcome"
+        win.styleMask = [.titled, .closable]
+        win.isReleasedWhenClosed = false
+        win.center()
+        onboardingWindow = win
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+    }
+
+    private func completeOnboarding() {
+        settings.hasOnboarded = true
+        onboardingWindow?.close()
+        onboardingWindow = nil
+        if let button = statusItem?.button {
+            updateStatusIcon(button: button)
+        }
+    }
+}
+
+private final class SettingsWindowDelegate: NSObject, NSWindowDelegate {
+    static let shared = SettingsWindowDelegate()
+    // No-op delegate kept around so the window remains valid while hidden.
 }

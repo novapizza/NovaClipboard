@@ -6,7 +6,7 @@ final class HistoryStore {
     static let defaultLimit = 500
 
     private let context: ModelContext
-    private let limit: Int
+    var limit: Int
 
     init(context: ModelContext, limit: Int = HistoryStore.defaultLimit) {
         self.context = context
@@ -15,10 +15,12 @@ final class HistoryStore {
 
     @discardableResult
     func insert(_ item: ClipboardItem) -> ClipboardItem {
-        if let mostRecent = fetchMostRecent(), mostRecent.checksum == item.checksum {
-            mostRecent.createdAt = Date()
+        if let dup = findRecentDuplicate(checksum: item.checksum) {
+            dup.createdAt = Date()
+            // Free up the new item's external image file (it was written eagerly by Monitor).
+            ImageStore.deleteFile(at: item.imagePath)
             try? context.save()
-            return mostRecent
+            return dup
         }
 
         context.insert(item)
@@ -28,7 +30,14 @@ final class HistoryStore {
     }
 
     func delete(_ item: ClipboardItem) {
+        ImageStore.deleteFile(at: item.imagePath)
+        ImageThumbnailCache.shared.invalidate(id: item.id)
         context.delete(item)
+        try? context.save()
+    }
+
+    func togglePin(_ item: ClipboardItem) {
+        item.isPinned.toggle()
         try? context.save()
     }
 
@@ -39,6 +48,8 @@ final class HistoryStore {
         let descriptor = FetchDescriptor<ClipboardItem>(predicate: predicate)
         let items = (try? context.fetch(descriptor)) ?? []
         for item in items {
+            ImageStore.deleteFile(at: item.imagePath)
+            ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
         try? context.save()
@@ -54,12 +65,27 @@ final class HistoryStore {
         return (try? context.fetch(descriptor)) ?? []
     }
 
-    private func fetchMostRecent() -> ClipboardItem? {
+    func search(query: String, type: ItemType? = nil, pinnedOnly: Bool = false) -> [ClipboardItem] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let typeRaw = type?.rawValue
+        let descriptor = FetchDescriptor<ClipboardItem>(
+            predicate: #Predicate { item in
+                (typeRaw == nil || item.typeRaw == typeRaw!) &&
+                (!pinnedOnly || item.isPinned) &&
+                (trimmed.isEmpty || item.preview.localizedStandardContains(trimmed))
+            },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    private func findRecentDuplicate(checksum: String) -> ClipboardItem? {
+        // Only compare against the most-recent item in Phase 2 (cross-history dedup is Phase 3.2).
         var descriptor = FetchDescriptor<ClipboardItem>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         descriptor.fetchLimit = 1
-        return (try? context.fetch(descriptor))?.first
+        return (try? context.fetch(descriptor))?.first.flatMap { $0.checksum == checksum ? $0 : nil }
     }
 
     private func evictOverflowIfNeeded() {
@@ -76,6 +102,8 @@ final class HistoryStore {
         overflowDescriptor.fetchLimit = unpinnedCount - limit
         let overflow = (try? context.fetch(overflowDescriptor)) ?? []
         for item in overflow {
+            ImageStore.deleteFile(at: item.imagePath)
+            ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
     }

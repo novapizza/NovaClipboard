@@ -1,12 +1,24 @@
 import Foundation
 import SwiftData
 
-enum ItemType: String, Codable {
+enum ItemType: String, Codable, CaseIterable, Identifiable {
     case text
     case link
     case image
     case file
     case richText
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .text: return "Text"
+        case .link: return "Link"
+        case .image: return "Image"
+        case .file: return "File"
+        case .richText: return "Rich Text"
+        }
+    }
 }
 
 @Model
@@ -16,6 +28,9 @@ final class ClipboardItem {
     var typeRaw: String
     var preview: String
     var contentText: String?
+    @Attribute(.externalStorage) var imageBlob: Data?
+    var imagePath: String?
+    var fileURLs: [String]?
     var sourceBundleID: String?
     var isPinned: Bool
     var checksum: String
@@ -31,6 +46,9 @@ final class ClipboardItem {
         type: ItemType,
         preview: String,
         contentText: String? = nil,
+        imageBlob: Data? = nil,
+        imagePath: String? = nil,
+        fileURLs: [String]? = nil,
         sourceBundleID: String? = nil,
         isPinned: Bool = false,
         checksum: String
@@ -40,6 +58,9 @@ final class ClipboardItem {
         self.typeRaw = type.rawValue
         self.preview = preview
         self.contentText = contentText
+        self.imageBlob = imageBlob
+        self.imagePath = imagePath
+        self.fileURLs = fileURLs
         self.sourceBundleID = sourceBundleID
         self.isPinned = isPinned
         self.checksum = checksum
@@ -55,6 +76,54 @@ extension ClipboardItem {
             contentText: string,
             sourceBundleID: sourceBundleID,
             checksum: Checksum.sha256(string)
+        )
+    }
+
+    static func link(_ url: String, sourceBundleID: String? = nil) -> ClipboardItem {
+        ClipboardItem(
+            type: .link,
+            preview: url,
+            contentText: url,
+            sourceBundleID: sourceBundleID,
+            checksum: Checksum.sha256(url)
+        )
+    }
+
+    static func image(
+        data: Data,
+        inline: Bool,
+        imagePath: String? = nil,
+        sourceBundleID: String? = nil
+    ) -> ClipboardItem {
+        let sizeKB = Double(data.count) / 1024.0
+        let preview = sizeKB < 1024
+            ? String(format: "Image · %.0f KB", sizeKB)
+            : String(format: "Image · %.1f MB", sizeKB / 1024.0)
+        return ClipboardItem(
+            type: .image,
+            preview: preview,
+            imageBlob: inline ? data : nil,
+            imagePath: inline ? nil : imagePath,
+            sourceBundleID: sourceBundleID,
+            checksum: Checksum.sha256(data)
+        )
+    }
+
+    static func file(urls: [String], sourceBundleID: String? = nil) -> ClipboardItem {
+        let preview: String
+        if urls.count == 1, let first = urls.first {
+            preview = (first as NSString).lastPathComponent.removingPercentEncoding ?? first
+        } else {
+            preview = "\(urls.count) files"
+        }
+        let payload = urls.joined(separator: "\n")
+        return ClipboardItem(
+            type: .file,
+            preview: preview,
+            contentText: payload,
+            fileURLs: urls,
+            sourceBundleID: sourceBundleID,
+            checksum: Checksum.sha256(payload)
         )
     }
 }
