@@ -83,6 +83,20 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(ignorePasswordFields, forKey: Key.ignorePasswordFields.rawValue) }
     }
 
+    @Published var captureScreenshots: Bool {
+        didSet { defaults.set(captureScreenshots, forKey: Key.captureScreenshots.rawValue) }
+    }
+
+    /// When true, suppresses macOS' floating screenshot preview so the file lands on disk
+    /// immediately. Backed by our own UserDefaults key and mirrored into
+    /// `com.apple.screencapture show-thumbnail`.
+    @Published var disableScreenshotPreview: Bool {
+        didSet {
+            defaults.set(disableScreenshotPreview, forKey: Key.disableScreenshotPreview.rawValue)
+            ScreenshotPreviewPreference.setDisabled(disableScreenshotPreview)
+        }
+    }
+
     @Published var blocklistBundleIDs: [String] {
         didSet { defaults.set(blocklistBundleIDs, forKey: Key.blocklistBundleIDs.rawValue) }
     }
@@ -108,6 +122,10 @@ final class AppSettings: ObservableObject {
         self.retention = (defaults.string(forKey: Key.retention.rawValue)
             .flatMap(RetentionPolicy.init(rawValue:))) ?? .forever
         self.ignorePasswordFields = (defaults.object(forKey: Key.ignorePasswordFields.rawValue) as? Bool) ?? true
+        self.captureScreenshots = (defaults.object(forKey: Key.captureScreenshots.rawValue) as? Bool) ?? true
+        // Pick up the existing system value on first launch so the toggle reflects reality.
+        self.disableScreenshotPreview = (defaults.object(forKey: Key.disableScreenshotPreview.rawValue) as? Bool)
+            ?? ScreenshotPreviewPreference.isThumbnailDisabled()
         if let saved = defaults.array(forKey: Key.blocklistBundleIDs.rawValue) as? [String] {
             self.blocklistBundleIDs = saved
         } else {
@@ -149,6 +167,8 @@ final class AppSettings: ObservableObject {
         case maxImageMB
         case retention
         case ignorePasswordFields
+        case captureScreenshots
+        case disableScreenshotPreview
         case blocklistBundleIDs
         case hasOnboarded
     }

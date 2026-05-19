@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var modelContainer: ModelContainer?
     private var historyStore: HistoryStore?
     private var clipboardMonitor: ClipboardMonitor?
+    private var screenshotWatcher: ScreenshotWatcher?
     private let hotKeyManager = HotKeyManager()
     private let anchorResolver = PanelAnchorResolver()
     private let pasteEngine = PasteEngine()
@@ -29,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupPanelController()
         setupClipboardMonitor()
+        setupScreenshotWatcher()
         setupSettingsBindings()
         applyHotKey()
         applyHistoryLimit()
@@ -42,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         clipboardMonitor?.stop()
+        screenshotWatcher?.stop()
         hotKeyManager.unregister()
         retentionTimer?.invalidate()
         permissionMonitorTimer?.invalidate()
@@ -133,6 +136,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboardMonitor = monitor
     }
 
+    private func setupScreenshotWatcher() {
+        let watcher = ScreenshotWatcher()
+        watcher.onScreenshot = { [weak self] url in
+            MainActor.assumeIsolated {
+                self?.ingestScreenshot(at: url)
+            }
+        }
+        screenshotWatcher = watcher
+        if settings.captureScreenshots {
+            watcher.start()
+        }
+    }
+
+    private func ingestScreenshot(at url: URL) {
+        guard let data = try? Data(contentsOf: url) else {
+            appLogger.error("Could not read screenshot data at \(url.path, privacy: .public)")
+            return
+        }
+
+        // Cap by the same MB limit users set for clipboard images.
+        let limitBytes = settings.maxImageMB * 1_024 * 1_024
+        guard data.count <= limitBytes else {
+            appLogger.info("Skipping screenshot, exceeds maxImageMB limit")
+            return
+        }
+
+        // Normalize to PNG (screenshots are PNG by default, but be defensive).
+        let pngData: Data
+        if let rep = NSBitmapImageRep(data: data),
+           let normalized = rep.representation(using: .png, properties: [:]) {
+            pngData = normalized
+        } else {
+            pngData = data
+        }
+
+        let id = UUID()
+        let inline = pngData.count < ImageStore.inlineLimitBytes
+        let path = inline ? nil : ImageStore.write(data: pngData, id: id)
+
+        let sizeKB = Double(pngData.count) / 1024.0
+        let preview = sizeKB < 1024
+            ? String(format: "Screenshot · %.0f KB", sizeKB)
+            : String(format: "Screenshot · %.1f MB", sizeKB / 1024.0)
+
+        let item = ClipboardItem(
+            id: id,
+            type: .image,
+            preview: preview,
+            imageBlob: inline ? pngData : nil,
+            imagePath: path,
+            sourceBundleID: "com.apple.screencapture",
+            checksum: Checksum.sha256(pngData)
+        )
+
+        historyStore?.insert(item)
+        appLogger.info("Inserted screenshot into history: \(url.lastPathComponent, privacy: .public)")
+    }
+
     private func setupSettingsBindings() {
         settings.$hotKey
             .dropFirst()
@@ -147,6 +208,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.$retention
             .dropFirst()
             .sink { [weak self] _ in self?.runRetentionSweep() }
+            .store(in: &cancellables)
+
+        settings.$captureScreenshots
+            .dropFirst()
+            .sink { [weak self] enabled in
+                if enabled {
+                    self?.screenshotWatcher?.start()
+                } else {
+                    self?.screenshotWatcher?.stop()
+                }
+            }
             .store(in: &cancellables)
     }
 

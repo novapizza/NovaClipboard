@@ -30,6 +30,14 @@ private struct GeneralTab: View {
         Form {
             Toggle("Launch at login", isOn: $settings.launchAtLogin)
 
+            Toggle("Capture screenshots automatically", isOn: $settings.captureScreenshots)
+                .help("Save new screenshots (⌘⇧3/4/5) to history the moment they're written to disk.")
+
+            Toggle("Skip macOS preview thumbnail (instant capture)",
+                   isOn: $settings.disableScreenshotPreview)
+                .help("Disables the floating screenshot preview so files land on Desktop immediately. Menu bar may flicker once when toggled.")
+                .disabled(!settings.captureScreenshots)
+
             HotKeyPicker(combo: $settings.hotKey)
 
             Picker("Panel position", selection: $settings.panelPosition) {
