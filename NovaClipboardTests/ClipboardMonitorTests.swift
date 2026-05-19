@@ -22,6 +22,31 @@ final class ClipboardMonitorTests: XCTestCase {
         wait(for: [exp], timeout: 2.0)
     }
 
+    func testSkipsConcealedUTI() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+
+        let monitor = ClipboardMonitor(pasteboard: pasteboard, pollInterval: 0.05)
+        var fired = 0
+        monitor.onNewItem = { _ in fired += 1 }
+        monitor.start()
+        defer { monitor.stop() }
+
+        pasteboard.clearContents()
+        let concealed = NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")
+        let item = NSPasteboardItem()
+        item.setString("secret-payload", forType: .string)
+        item.setString("1", forType: concealed)
+        pasteboard.writeObjects([item])
+
+        // Give the monitor a couple of poll intervals.
+        let exp = expectation(description: "settle")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { exp.fulfill() }
+        wait(for: [exp], timeout: 1.0)
+
+        XCTAssertEqual(fired, 0, "concealed UTI should suppress capture")
+    }
+
     func testIgnoresSameContent() {
         let pasteboard = NSPasteboard.withUniqueName()
         defer { pasteboard.releaseGlobally() }

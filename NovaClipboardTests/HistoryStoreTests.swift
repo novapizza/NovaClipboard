@@ -107,6 +107,20 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(links.first?.type, .link)
     }
 
+    func testDedupAcrossRecentHistory() {
+        let first = store.insert(ClipboardItem.text("alpha"))
+        let firstDate = first.createdAt
+        store.insert(ClipboardItem.text("beta"))
+        store.insert(ClipboardItem.text("gamma"))
+        Thread.sleep(forTimeInterval: 0.02)
+
+        // Re-copying "alpha" should refresh the existing row, not insert a duplicate.
+        let touched = store.insert(ClipboardItem.text("alpha"))
+        XCTAssertEqual(store.fetchAll().count, 3)
+        XCTAssertEqual(touched.id, first.id)
+        XCTAssertGreaterThan(touched.createdAt, firstDate)
+    }
+
     func testSearchPinnedOnly() {
         let pinned = store.insert(ClipboardItem.text("important"))
         store.togglePin(pinned)

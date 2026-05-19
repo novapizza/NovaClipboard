@@ -79,13 +79,17 @@ final class HistoryStore {
         return (try? context.fetch(descriptor)) ?? []
     }
 
+    /// Dedup against the most-recent N items by checksum (Spec §3.2 / Plan Step 3.2).
+    /// Re-copying an older item refreshes its `createdAt` rather than inserting a duplicate.
+    private static let dedupWindow = 50
+
     private func findRecentDuplicate(checksum: String) -> ClipboardItem? {
-        // Only compare against the most-recent item in Phase 2 (cross-history dedup is Phase 3.2).
         var descriptor = FetchDescriptor<ClipboardItem>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        descriptor.fetchLimit = 1
-        return (try? context.fetch(descriptor))?.first.flatMap { $0.checksum == checksum ? $0 : nil }
+        descriptor.fetchLimit = HistoryStore.dedupWindow
+        let recent = (try? context.fetch(descriptor)) ?? []
+        return recent.first(where: { $0.checksum == checksum })
     }
 
     private func evictOverflowIfNeeded() {

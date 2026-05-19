@@ -133,11 +133,13 @@ struct HistoryPanelView: View {
             Spacer()
             Text("\(visibleItems.count)")
                 .foregroundStyle(.secondary)
+                .accessibilityLabel("\(visibleItems.count) items")
         }
         .font(.caption)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .accessibilityElement(children: .contain)
     }
 
     private func sectionHeader(_ text: String) -> some View {
@@ -285,6 +287,7 @@ private struct SearchBar: View {
             TextField("Search", text: $query)
                 .textFieldStyle(.plain)
                 .focused($fieldFocused)
+                .accessibilityLabel("Search clipboard history")
             if !query.isEmpty {
                 Button {
                     query = ""
@@ -339,6 +342,8 @@ private struct Chip: View {
                 .foregroundStyle(selected ? Color.white : Color.primary)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Filter: \(title)")
+        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }
 }
 

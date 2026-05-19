@@ -18,6 +18,7 @@
 		654A93111DD1CBD097094D5D /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894927E657A5FDDB08FA977D /* ClipboardItem.swift */; };
 		7198F76F53036F6C71C99EBF /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DF00C7E8C96D8ABB8A88CD /* HotKeyManager.swift */; };
 		77AF6D1F3E0C4F667864B5BD /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905BB92C1BB6730E852D92C3 /* PermissionsView.swift */; };
+		7A91C03301AA000000000301 /* PasteboardSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A91C03301AA000000000302 /* PasteboardSnapshotTests.swift */; };
 		81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */; };
 		855F998A7279FCFAB5176016 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966F4876CA9F2BCE21EFA23D /* AppSettings.swift */; };
 		882186C13BA4A6A35F055CE0 /* HistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995E042E52580CF288E1D553 /* HistoryStoreTests.swift */; };
@@ -49,6 +50,7 @@
 		42E7E7CDDB49F0905727B7BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryItemRow.swift; sourceTree = "<group>"; };
+		7A91C03301AA000000000302 /* PasteboardSnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteboardSnapshotTests.swift; sourceTree = "<group>"; };
 		7D1E1FFCA19F31AD16772FC6 /* FaviconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconCache.swift; sourceTree = "<group>"; };
 		82112A46989E8A9859481866 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
 		894927E657A5FDDB08FA977D /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 				9AD8F6638AD67BC883E1216A /* ChecksumTests.swift */,
 				C75E2455BB1F86E371574F48 /* ClipboardMonitorTests.swift */,
 				995E042E52580CF288E1D553 /* HistoryStoreTests.swift */,
+				7A91C03301AA000000000302 /* PasteboardSnapshotTests.swift */,
 				DF59BF63DC699D64BBBFF1A2 /* NovaClipboardTests.swift */,
 			);
 			path = NovaClipboardTests;
@@ -324,6 +327,7 @@
 				C6717B036D85549822CE0628 /* ChecksumTests.swift in Sources */,
 				DF8A9F366CFA575C61FDC20D /* ClipboardMonitorTests.swift in Sources */,
 				882186C13BA4A6A35F055CE0 /* HistoryStoreTests.swift in Sources */,
+				7A91C03301AA000000000301 /* PasteboardSnapshotTests.swift in Sources */,
 				A22F8B5790DDF41DCF8C477A /* NovaClipboardTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -343,6 +347,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
@@ -379,6 +384,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;

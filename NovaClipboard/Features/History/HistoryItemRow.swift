@@ -58,6 +58,23 @@ struct HistoryItemRow: View {
                 .fill(isSelected ? Color.accentColor.opacity(0.22) : .clear)
         )
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityHint("Press return to paste")
+    }
+
+    private var accessibilityDescription: String {
+        let relative = Self.relativeFormatter.localizedString(for: item.createdAt, relativeTo: Date())
+        let pin = item.isPinned ? "Pinned. " : ""
+        let kind: String
+        switch item.type {
+        case .text, .richText: kind = "Text"
+        case .link: kind = "Link"
+        case .image: kind = "Image"
+        case .file: kind = "File"
+        }
+        return "\(pin)\(kind). \(item.preview). Copied \(relative)."
     }
 
     @ViewBuilder
