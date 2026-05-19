@@ -101,12 +101,13 @@ final class AppSettings: ObservableObject {
             x: defaults.object(forKey: Key.fixedX.rawValue) as? CGFloat ?? 200,
             y: defaults.object(forKey: Key.fixedY.rawValue) as? CGFloat ?? 200
         )
-        self.launchAtLogin = defaults.bool(forKey: Key.launchAtLogin.rawValue)
-        self.maxItems = (defaults.object(forKey: Key.maxItems.rawValue) as? Int) ?? 500
-        self.maxImageMB = (defaults.object(forKey: Key.maxImageMB.rawValue) as? Int) ?? 10
+        let storedLaunchAtLogin = defaults.object(forKey: Key.launchAtLogin.rawValue) as? Bool
+        self.launchAtLogin = storedLaunchAtLogin ?? true
+        self.maxItems = (defaults.object(forKey: Key.maxItems.rawValue) as? Int) ?? 50
+        self.maxImageMB = (defaults.object(forKey: Key.maxImageMB.rawValue) as? Int) ?? 4
         self.retention = (defaults.string(forKey: Key.retention.rawValue)
             .flatMap(RetentionPolicy.init(rawValue:))) ?? .forever
-        self.ignorePasswordFields = defaults.bool(forKey: Key.ignorePasswordFields.rawValue)
+        self.ignorePasswordFields = (defaults.object(forKey: Key.ignorePasswordFields.rawValue) as? Bool) ?? true
         if let saved = defaults.array(forKey: Key.blocklistBundleIDs.rawValue) as? [String] {
             self.blocklistBundleIDs = saved
         } else {
@@ -114,6 +115,13 @@ final class AppSettings: ObservableObject {
             defaults.set(AppSettings.defaultBlocklistBundleIDs, forKey: Key.blocklistBundleIDs.rawValue)
         }
         self.hasOnboarded = defaults.bool(forKey: Key.hasOnboarded.rawValue)
+
+        // First launch: persist default-true and register the login item so
+        // the OS-level state matches the UI (didSet doesn't fire during init).
+        if storedLaunchAtLogin == nil {
+            defaults.set(true, forKey: Key.launchAtLogin.rawValue)
+            LaunchAtLogin.set(enabled: true)
+        }
     }
 
     private func persist(_ combo: KeyCombo, key: Key) {

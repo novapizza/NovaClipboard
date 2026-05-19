@@ -75,8 +75,8 @@ private struct HistoryTab: View {
                         get: { Double(settings.maxItems) },
                         set: { settings.maxItems = Int($0) }
                     ),
-                    in: 100...2000,
-                    step: 50
+                    in: 1...100,
+                    step: 1
                 )
                 .frame(width: 220)
             }
@@ -88,7 +88,7 @@ private struct HistoryTab: View {
                         get: { Double(settings.maxImageMB) },
                         set: { settings.maxImageMB = Int($0) }
                     ),
-                    in: 1...50,
+                    in: 1...10,
                     step: 1
                 )
                 .frame(width: 220)
