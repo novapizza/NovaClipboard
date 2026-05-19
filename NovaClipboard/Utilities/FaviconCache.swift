@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import os
 
-private let faviconLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "FaviconCache")
+private let faviconLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "FaviconCache")
 
 /// Lazy favicon fetcher keyed by host. Failed hosts are remembered for the session
 /// so we don't re-hammer dead endpoints while the panel is open.

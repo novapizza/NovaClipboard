@@ -4,7 +4,7 @@ import SwiftData
 import SwiftUI
 import os
 
-private let appLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "AppDelegate")
+private let appLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "AppDelegate")
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {

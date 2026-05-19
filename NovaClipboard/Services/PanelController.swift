@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 import os
 
-private let panelLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "PanelController")
+private let panelLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "PanelController")
 
 @MainActor
 final class PanelController {

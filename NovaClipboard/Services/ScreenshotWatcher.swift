@@ -3,7 +3,7 @@ import CoreServices
 import Foundation
 import os
 
-private let screenshotLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "ScreenshotWatcher")
+private let screenshotLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "ScreenshotWatcher")
 
 /// Watches the user's configured screenshot directory (default `~/Desktop`) via FSEvents
 /// and reports new screenshot files. Clipboard-only screenshots (⌃⌘⇧3/4) are already

@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import os
 
-private let monitorLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "ClipboardMonitor")
+private let monitorLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "ClipboardMonitor")
 
 final class ClipboardMonitor {
     /// Pasteboard UTIs that indicate the source app wants its contents kept private.

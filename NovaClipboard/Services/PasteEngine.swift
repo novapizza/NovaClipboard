@@ -3,7 +3,7 @@ import ApplicationServices
 import Carbon.HIToolbox
 import os
 
-private let logger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "PasteEngine")
+private let logger = Logger(subsystem: "io.haunc.NovaClipboard", category: "PasteEngine")
 
 final class PasteEngine {
     /// How long to wait after Cmd+V before restoring the original pasteboard.

@@ -2,7 +2,7 @@ import Foundation
 import ServiceManagement
 import os
 
-private let launchLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "LaunchAtLogin")
+private let launchLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "LaunchAtLogin")
 
 enum LaunchAtLogin {
     static func set(enabled: Bool) {

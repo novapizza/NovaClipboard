@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import os
 
-private let imageStoreLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "ImageStore")
+private let imageStoreLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "ImageStore")
 
 enum ImageStore {
     static let inlineLimitBytes = 1_024 * 1_024

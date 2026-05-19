@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-private let prefLogger = Logger(subsystem: "io.creativeforce.NovaClipboard", category: "ScreenshotPreviewPreference")
+private let prefLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "ScreenshotPreviewPreference")
 
 /// Toggles the macOS screenshot preview thumbnail (the floating preview that delays
 /// the file write to Desktop by ~5s). When disabled, `screencapture` writes the file

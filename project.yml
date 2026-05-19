@@ -1,6 +1,6 @@
 name: NovaClipboard
 options:
-  bundleIdPrefix: io.creativeforce
+  bundleIdPrefix: io.haunc
   deploymentTarget:
     macOS: "14.0"
   developmentLanguage: en
@@ -33,7 +33,7 @@ targets:
         NSHumanReadableCopyright: "Copyright © 2026 Creative Force. All rights reserved."
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.creativeforce.NovaClipboard
+        PRODUCT_BUNDLE_IDENTIFIER: io.haunc.NovaClipboard
         PRODUCT_NAME: NovaClipboard
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: NovaClipboard/Resources/Info.plist
@@ -50,7 +50,7 @@ targets:
       - target: NovaClipboard
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.creativeforce.NovaClipboardTests
+        PRODUCT_BUNDLE_IDENTIFIER: io.haunc.NovaClipboardTests
         GENERATE_INFOPLIST_FILE: YES
         BUNDLE_LOADER: "$(TEST_HOST)"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/NovaClipboard.app/Contents/MacOS/NovaClipboard"
