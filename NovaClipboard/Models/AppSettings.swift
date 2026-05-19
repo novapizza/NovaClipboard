@@ -34,6 +34,15 @@ enum RetentionPolicy: String, Codable, CaseIterable, Identifiable {
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
+    /// Password managers and keychain UIs preloaded on first launch (Spec §7.1).
+    static let defaultBlocklistBundleIDs: [String] = [
+        "com.1password.1password",
+        "com.1password.1password7",
+        "com.lastpass.LastPass",
+        "com.bitwarden.desktop",
+        "com.apple.keychainaccess"
+    ]
+
     private let defaults: UserDefaults
 
     @Published var hotKey: KeyCombo {
@@ -98,7 +107,12 @@ final class AppSettings: ObservableObject {
         self.retention = (defaults.string(forKey: Key.retention.rawValue)
             .flatMap(RetentionPolicy.init(rawValue:))) ?? .forever
         self.ignorePasswordFields = defaults.bool(forKey: Key.ignorePasswordFields.rawValue)
-        self.blocklistBundleIDs = (defaults.array(forKey: Key.blocklistBundleIDs.rawValue) as? [String]) ?? []
+        if let saved = defaults.array(forKey: Key.blocklistBundleIDs.rawValue) as? [String] {
+            self.blocklistBundleIDs = saved
+        } else {
+            self.blocklistBundleIDs = AppSettings.defaultBlocklistBundleIDs
+            defaults.set(AppSettings.defaultBlocklistBundleIDs, forKey: Key.blocklistBundleIDs.rawValue)
+        }
         self.hasOnboarded = defaults.bool(forKey: Key.hasOnboarded.rawValue)
     }
 

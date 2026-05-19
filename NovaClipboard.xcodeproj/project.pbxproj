@@ -21,6 +21,7 @@
 		81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */; };
 		855F998A7279FCFAB5176016 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966F4876CA9F2BCE21EFA23D /* AppSettings.swift */; };
 		882186C13BA4A6A35F055CE0 /* HistoryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995E042E52580CF288E1D553 /* HistoryStoreTests.swift */; };
+		8B59D5BFCC647D251616A165 /* FaviconCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1E1FFCA19F31AD16772FC6 /* FaviconCache.swift */; };
 		959BF62D8F748012C165895A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C700689EA6D9F9B589172E /* SettingsView.swift */; };
 		9D8A65512D39D294FBD79D59 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB8F9DB85B2BFEAD1D19D4A2 /* ClipboardMonitor.swift */; };
 		A22F8B5790DDF41DCF8C477A /* NovaClipboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF59BF63DC699D64BBBFF1A2 /* NovaClipboardTests.swift */; };
@@ -48,6 +49,7 @@
 		42E7E7CDDB49F0905727B7BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryItemRow.swift; sourceTree = "<group>"; };
+		7D1E1FFCA19F31AD16772FC6 /* FaviconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconCache.swift; sourceTree = "<group>"; };
 		82112A46989E8A9859481866 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
 		894927E657A5FDDB08FA977D /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		8E983524F663810FD4E66441 /* HistoryPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPanelView.swift; sourceTree = "<group>"; };
@@ -95,6 +97,7 @@
 			isa = PBXGroup;
 			children = (
 				C2839AAA4769A6D20370FAE5 /* Checksum.swift */,
+				7D1E1FFCA19F31AD16772FC6 /* FaviconCache.swift */,
 				82112A46989E8A9859481866 /* ImageStore.swift */,
 				46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */,
 			);
@@ -248,6 +251,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					4BE40A0991DE5521AE8601DA = {
+						ProvisioningStyle = Automatic;
+					};
 					C1FFA4D05803F96ABCF6C4A3 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -294,6 +300,7 @@
 				EC227B2F00F0B304BAEFAA14 /* Checksum.swift in Sources */,
 				654A93111DD1CBD097094D5D /* ClipboardItem.swift in Sources */,
 				9D8A65512D39D294FBD79D59 /* ClipboardMonitor.swift in Sources */,
+				8B59D5BFCC647D251616A165 /* FaviconCache.swift in Sources */,
 				5E5300685781376CF1201021 /* HistoryItemRow.swift in Sources */,
 				FD0B2B22F9390C7851AFC264 /* HistoryPanelView.swift in Sources */,
 				05AEDDF5D6F491EECD68F194 /* HistoryStore.swift in Sources */,
@@ -336,10 +343,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -349,7 +353,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboard;
 				PRODUCT_NAME = NovaClipboard;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -376,10 +379,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -389,7 +389,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.creativeforce.NovaClipboard;
 				PRODUCT_NAME = NovaClipboard;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 			};
 			name = Release;

@@ -83,7 +83,9 @@ struct HistoryItemRow: View {
             } else {
                 fallbackIcon
             }
-        case .link, .text, .richText:
+        case .link:
+            LinkIconView(urlString: item.contentText ?? item.preview)
+        case .text, .richText:
             fallbackIcon
         }
     }
@@ -101,6 +103,37 @@ struct HistoryItemRow: View {
         case .link: return "link"
         case .image: return "photo"
         case .file: return "doc"
+        }
+    }
+}
+
+private struct LinkIconView: View {
+    let urlString: String
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+            } else {
+                Image(systemName: "link")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
+            }
+        }
+        .task(id: urlString) {
+            if let cached = FaviconCache.shared.cached(for: urlString) {
+                image = cached
+                return
+            }
+            let fetched = await FaviconCache.shared.favicon(for: urlString)
+            if !Task.isCancelled {
+                image = fetched
+            }
         }
     }
 }
