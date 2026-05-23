@@ -12,6 +12,10 @@ final class PasteEngine {
     static let restoreDelay: TimeInterval = 0.5
 
     func paste(item: ClipboardItem, toApp app: NSRunningApplication?) {
+        guard item.isSafeToAccess else {
+            logger.warning("paste() aborted: item detached from context")
+            return
+        }
         logger.info("paste() called for item type=\(item.type.rawValue, privacy: .public), targetApp=\(app?.bundleIdentifier ?? "nil", privacy: .public)")
 
         let pasteboard = NSPasteboard.general

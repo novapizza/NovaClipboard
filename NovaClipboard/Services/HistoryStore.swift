@@ -30,7 +30,7 @@ final class HistoryStore {
     }
 
     func delete(_ item: ClipboardItem) {
-        ImageStore.deleteFile(at: item.imagePath)
+        ImageStore.deleteFile(at: item.safeImagePath)
         ImageThumbnailCache.shared.invalidate(id: item.id)
         context.delete(item)
         try? context.save()
@@ -48,7 +48,7 @@ final class HistoryStore {
         let descriptor = FetchDescriptor<ClipboardItem>(predicate: predicate)
         let items = (try? context.fetch(descriptor)) ?? []
         for item in items {
-            ImageStore.deleteFile(at: item.imagePath)
+            ImageStore.deleteFile(at: item.safeImagePath)
             ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
@@ -106,7 +106,7 @@ final class HistoryStore {
         overflowDescriptor.fetchLimit = unpinnedCount - limit
         let overflow = (try? context.fetch(overflowDescriptor)) ?? []
         for item in overflow {
-            ImageStore.deleteFile(at: item.imagePath)
+            ImageStore.deleteFile(at: item.safeImagePath)
             ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
