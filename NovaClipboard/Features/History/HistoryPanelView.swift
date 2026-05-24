@@ -269,7 +269,7 @@ struct HistoryPanelView: View {
     }
 
     private func delete(_ item: ClipboardItem) {
-        ImageStore.deleteFile(at: item.imagePath)
+        ImageStore.deleteFile(at: item.safeImagePath)
         ImageThumbnailCache.shared.invalidate(id: item.id)
         modelContext.delete(item)
         try? modelContext.save()

@@ -127,3 +127,19 @@ extension ClipboardItem {
         )
     }
 }
+
+extension ClipboardItem {
+    var isSafeToAccess: Bool {
+        !isDeleted && modelContext != nil
+    }
+
+    var safeImageBlob: Data? {
+        guard isSafeToAccess else { return nil }
+        return imageBlob
+    }
+
+    var safeImagePath: String? {
+        guard isSafeToAccess else { return nil }
+        return imagePath
+    }
+}

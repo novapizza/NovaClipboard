@@ -61,7 +61,8 @@ final class ImageThumbnailCache {
     func thumbnail(for item: ClipboardItem) -> NSImage? {
         let key = item.id.uuidString as NSString
         if let cached = cache.object(forKey: key) { return cached }
-        guard let image = ImageStore.loadImage(blob: item.imageBlob, path: item.imagePath) else {
+        guard item.isSafeToAccess,
+              let image = ImageStore.loadImage(blob: item.imageBlob, path: item.imagePath) else {
             return nil
         }
         let thumb = makeThumbnail(image: image, size: thumbnailSize)

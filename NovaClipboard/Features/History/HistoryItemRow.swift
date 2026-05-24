@@ -17,44 +17,48 @@ struct HistoryItemRow: View {
     }()
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            leadingVisual
-                .frame(width: 36, height: 36)
+        if !item.isSafeToAccess {
+            EmptyView()
+        } else {
+            HStack(alignment: .top, spacing: 10) {
+                leadingVisual
+                    .frame(width: 36, height: 36)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.preview)
-                    .lineLimit(2)
-                    .font(item.type == .text ? .body : .body.monospaced())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.preview)
+                        .lineLimit(2)
+                        .font(item.type == .text ? .body : .body.monospaced())
+                }
+                Spacer(minLength: 0)
+
+                pinButton
+                deleteButton
+
+                if let quickPasteIndex, quickPasteIndex < 9 {
+                    Text("⌘\(quickPasteIndex + 1)")
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.secondary.opacity(0.35), lineWidth: 0.5)
+                        )
+                }
             }
-            Spacer(minLength: 0)
-
-            pinButton
-            deleteButton
-
-            if let quickPasteIndex, quickPasteIndex < 9 {
-                Text("⌘\(quickPasteIndex + 1)")
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.secondary.opacity(0.35), lineWidth: 0.5)
-                    )
-            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.accentColor.opacity(0.22) : .clear)
+            )
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilityDescription)
+            .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+            .accessibilityHint("Press return to paste")
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor.opacity(0.22) : .clear)
-        )
-        .contentShape(Rectangle())
-        .onHover { isHovered = $0 }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityDescription)
-        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
-        .accessibilityHint("Press return to paste")
     }
 
     @ViewBuilder
