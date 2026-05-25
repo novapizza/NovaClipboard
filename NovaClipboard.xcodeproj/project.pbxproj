@@ -11,6 +11,7 @@
 		10442D53F4349C0CAD5958A7 /* ImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82112A46989E8A9859481866 /* ImageStore.swift */; };
 		11A220002A8169EC0D814480 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */; };
 		1BDE88B884FB4AF774817301 /* PanelAnchorResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D684E753FF1631572276716A /* PanelAnchorResolver.swift */; };
+		31FC2D2B4DE119AC961BF230 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED5253D88A161094198F006 /* LiquidGlass.swift */; };
 		3DF70F161111D0B812011356 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CDFB7B8DBDAC366B35D44B /* AppDelegate.swift */; };
 		4DEC66CB9658B1E5DFB8AD2B /* PanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFF0194B8B583443AF9DE740 /* PanelController.swift */; };
 		58E2F4282B67437B349A840C /* KeyCombo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1138540629F3296E37191 /* KeyCombo.swift */; };
@@ -48,6 +49,7 @@
 
 /* Begin PBXFileReference section */
 		1D846BACDA5C11B67B740EF1 /* PasteEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteEngine.swift; sourceTree = "<group>"; };
+		1ED5253D88A161094198F006 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		41DF00C7E8C96D8ABB8A88CD /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		42E7E7CDDB49F0905727B7BF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
@@ -115,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				75430E0ABA19F7662C44CF62 /* App */,
+				A98E11A7B37C61EB19BA3372 /* Design */,
 				0717AFD05F9AEC2C5905455F /* Features */,
 				DFC84B5E637E8E3D51A667B5 /* Models */,
 				2AE8B9D7CC4BCC9FB4D8E491 /* Resources */,
@@ -168,6 +171,14 @@
 				B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		A98E11A7B37C61EB19BA3372 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				1ED5253D88A161094198F006 /* LiquidGlass.swift */,
+			);
+			path = Design;
 			sourceTree = "<group>";
 		};
 		AA3B1BD866BD93929842A5A0 = {
@@ -317,6 +328,7 @@
 				10442D53F4349C0CAD5958A7 /* ImageStore.swift in Sources */,
 				58E2F4282B67437B349A840C /* KeyCombo.swift in Sources */,
 				11A220002A8169EC0D814480 /* LaunchAtLogin.swift in Sources */,
+				31FC2D2B4DE119AC961BF230 /* LiquidGlass.swift in Sources */,
 				81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */,
 				1BDE88B884FB4AF774817301 /* PanelAnchorResolver.swift in Sources */,
 				4DEC66CB9658B1E5DFB8AD2B /* PanelController.swift in Sources */,
@@ -355,6 +367,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;
@@ -391,6 +404,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NovaClipboard/Resources/Info.plist;

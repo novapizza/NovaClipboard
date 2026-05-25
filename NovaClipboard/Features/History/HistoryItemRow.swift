@@ -17,40 +17,50 @@ struct HistoryItemRow: View {
     }()
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             leadingVisual
                 .frame(width: 36, height: 36)
+                .liquidGlass(.regular, in: .roundedRect(cornerRadius: 9))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.preview)
                     .lineLimit(2)
                     .font(item.type == .text ? .body : .body.monospaced())
+                Text(Self.relativeFormatter.localizedString(for: item.createdAt, relativeTo: Date()))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
             Spacer(minLength: 0)
 
-            pinButton
-            deleteButton
+            HStack(spacing: 4) {
+                pinButton
+                deleteButton
+            }
 
             if let quickPasteIndex, quickPasteIndex < 9 {
                 Text("⌘\(quickPasteIndex + 1)")
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.secondary.opacity(0.35), lineWidth: 0.5)
-                    )
+                    .font(.caption2.monospaced().weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .liquidGlass(.regular, in: .capsule)
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 7)
         .padding(.horizontal, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected ? Color.accentColor.opacity(0.22) : .clear)
-        )
+        .background {
+            if isSelected {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.clear)
+                    .liquidGlass(.tinted(.accentColor), in: .roundedRect(cornerRadius: 12))
+            } else if isHovered {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.primary.opacity(0.05))
+            }
+        }
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isSelected)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
@@ -63,12 +73,17 @@ struct HistoryItemRow: View {
             let shouldShow = item.isPinned || isHovered || isSelected
             Button(action: onTogglePin) {
                 Image(systemName: item.isPinned ? "pin.fill" : "pin")
-                    .font(.caption)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(item.isPinned ? .orange : .secondary)
-                    .frame(width: 18, height: 18)
-                    .contentShape(Rectangle())
+                    .frame(width: 22, height: 22)
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
+            .background {
+                if item.isPinned || isHovered {
+                    Circle().fill(.clear).liquidGlass(.regular, in: .circle)
+                }
+            }
             .opacity(shouldShow ? 1 : 0)
             .accessibilityLabel(item.isPinned ? "Unpin item" : "Pin item")
             .help(item.isPinned ? "Unpin" : "Pin")
@@ -81,12 +96,17 @@ struct HistoryItemRow: View {
             let shouldShow = isHovered || isSelected
             Button(action: onDelete) {
                 Image(systemName: "trash")
-                    .font(.caption)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 18, height: 18)
-                    .contentShape(Rectangle())
+                    .frame(width: 22, height: 22)
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
+            .background {
+                if isHovered {
+                    Circle().fill(.clear).liquidGlass(.regular, in: .circle)
+                }
+            }
             .opacity(shouldShow ? 1 : 0)
             .accessibilityLabel("Delete item")
             .help("Delete")
@@ -113,9 +133,9 @@ struct HistoryItemRow: View {
             if let thumb = ImageThumbnailCache.shared.thumbnail(for: item) {
                 Image(nsImage: thumb)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: 36, height: 36)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
             } else {
                 fallbackIcon
             }

@@ -6,18 +6,32 @@ struct SettingsView: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        TabView {
-            GeneralTab(settings: settings)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            HistoryTab(settings: settings)
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-            PrivacyTab(settings: settings)
-                .tabItem { Label("Privacy", systemImage: "lock.shield") }
-            AboutTab()
-                .tabItem { Label("About", systemImage: "info.circle") }
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.accentColor.opacity(0.14),
+                    Color.purple.opacity(0.08),
+                    Color.blue.opacity(0.10)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Rectangle().fill(.ultraThinMaterial)
+
+            TabView {
+                GeneralTab(settings: settings)
+                    .tabItem { Label("General", systemImage: "gearshape") }
+                HistoryTab(settings: settings)
+                    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                PrivacyTab(settings: settings)
+                    .tabItem { Label("Privacy", systemImage: "lock.shield") }
+                AboutTab()
+                    .tabItem { Label("About", systemImage: "info.circle") }
+            }
+            .scrollContentBackground(.hidden)
+            .padding(20)
         }
-        .frame(width: 480, height: 360)
-        .padding(20)
+        .frame(width: 480, height: 380)
     }
 }
 
@@ -169,17 +183,30 @@ private struct PrivacyTab: View {
 
 private struct AboutTab: View {
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
+            Spacer(minLength: 8)
             Image(systemName: "doc.on.clipboard.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 44, weight: .light))
                 .foregroundStyle(Color.accentColor)
+                .frame(width: 96, height: 96)
+                .liquidGlass(.regular, in: .circle)
             Text("NovaClipboard")
                 .font(.title2.bold())
             Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")")
+                .font(.callout)
                 .foregroundStyle(.secondary)
-            HStack(spacing: 16) {
-                Link("Send feedback", destination: URL(string: "mailto:haunc@creativeforce.io")!)
-                Link("GitHub", destination: URL(string: "https://github.com/creativeforce")!)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .liquidGlass(.regular, in: .capsule)
+            HStack(spacing: 10) {
+                Link(destination: URL(string: "mailto:haunc@creativeforce.io")!) {
+                    Label("Send feedback", systemImage: "envelope")
+                }
+                .buttonStyle(.liquidGlass())
+                Link(destination: URL(string: "https://github.com/creativeforce")!) {
+                    Label("GitHub", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.liquidGlass())
             }
             .font(.callout)
             Spacer()
@@ -202,15 +229,10 @@ private struct HotKeyPicker: View {
                 capturing.toggle()
             } label: {
                 Text(capturing ? "Press combo…" : combo.displayString)
+                    .font(.callout.monospaced())
                     .frame(minWidth: 100)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(capturing ? Color.accentColor : Color.secondary.opacity(0.4))
-                    )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.liquidGlass(tint: capturing ? .accentColor : nil))
             .background(HotKeyCapture(active: capturing) { newCombo in
                 combo = newCombo
                 capturing = false

@@ -46,66 +46,33 @@ struct HistoryPanelView: View {
     @State private var filter: HistoryFilter = .all
     @State private var searchFocused: Bool = false
     @State private var debounceTask: Task<Void, Never>?
+    @State private var showClearAllConfirm: Bool = false
 
     let onPaste: (ClipboardItem) -> Void
     let onDismiss: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // TEMP: search & filter chips hidden — panel always shows "All".
-            // SearchBar(query: $query, isFocused: $searchFocused)
-            //     .padding(.horizontal, 10)
-            //     .padding(.top, 8)
-            //     .padding(.bottom, 4)
-            //
-            // FilterChipsBar(filter: $filter)
-            //     .padding(.horizontal, 10)
-            //     .padding(.bottom, 4)
-            //
-            // Divider()
+        ZStack {
+            panelBackground
+                .ignoresSafeArea()
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        let pinnedCount = pinnedItems.count
-                        ForEach(Array(visibleItems.enumerated()), id: \.element.persistentModelID) { idx, item in
-                            if shouldShowPinnedSection && pinnedCount > 0 {
-                                if idx == 0 {
-                                    sectionHeader("Pinned")
-                                } else if idx == pinnedCount && !recentItems.isEmpty {
-                                    sectionHeader("Recent")
-                                }
-                            }
-                            row(for: item, quickIdx: idx)
-                        }
+            VStack(spacing: 10) {
+                headerBar
 
-                        if visibleItems.isEmpty {
-                            VStack {
-                                Spacer(minLength: 40)
-                                Text(query.isEmpty ? "No clipboard items yet" : "No matches")
-                                    .foregroundStyle(.tertiary)
-                                Spacer(minLength: 40)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
+                if visibleItems.isEmpty {
+                    emptyState
+                } else {
+                    listBody
                 }
-                .onChange(of: selectedID) { _, newValue in
-                    guard let newValue else { return }
-                    withAnimation(.linear(duration: 0.08)) {
-                        proxy.scrollTo(newValue, anchor: .center)
-                    }
-                }
+
+                statusBar
             }
-
-            Divider()
-            statusBar
+            .padding(.horizontal, 10)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
         }
         .frame(width: 380, height: 480)
         .background(KeyHandlerView(actions: keyActions))
-        .background(.regularMaterial)
         .onAppear {
             debouncedQuery = query
             ensureSelection()
@@ -122,32 +89,155 @@ struct HistoryPanelView: View {
         .onChange(of: filter) { _, _ in ensureSelection() }
     }
 
+    private var panelBackground: some View {
+        ZStack {
+            // Soft tinted gradient backdrop so Liquid Glass has something
+            // colorful to refract. On macOS 14/15 this is still the visual
+            // floor under the .ultraThinMaterial fallback.
+            LinearGradient(
+                colors: [
+                    Color.accentColor.opacity(0.18),
+                    Color.purple.opacity(0.10),
+                    Color.blue.opacity(0.12)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Rectangle().fill(.ultraThinMaterial)
+        }
+    }
+
+    private var headerBar: some View {
+        HStack(spacing: 8) {
+            Text("Clipboard")
+                .font(.headline)
+            Spacer()
+            Button {
+                showClearAllConfirm = true
+            } label: {
+                Label("Clear", systemImage: "trash")
+                    .labelStyle(.titleAndIcon)
+                    .font(.caption.weight(.medium))
+            }
+            .buttonStyle(.liquidGlass())
+            .disabled(visibleItems.isEmpty)
+            .opacity(visibleItems.isEmpty ? 0.5 : 1)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .liquidGlass(.regular, in: .capsule)
+        .confirmationDialog(
+            "Clear all clipboard history?",
+            isPresented: $showClearAllConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Clear All", role: .destructive) { clearAllNonPinned() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Pinned items will be kept.")
+        }
+    }
+
+    private func clearAllNonPinned() {
+        let toDelete = allItems.filter { !$0.isPinned }
+        for item in toDelete {
+            ImageStore.deleteFile(at: item.imagePath)
+            ImageThumbnailCache.shared.invalidate(id: item.id)
+            modelContext.delete(item)
+        }
+        try? modelContext.save()
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 6) {
+            if query.isEmpty {
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundStyle(.secondary)
+                    .padding(14)
+                    .liquidGlass(.regular, in: .circle)
+                    .padding(.bottom, 4)
+                Text("Nothing here")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                Text("You'll see your clipboard history here once you've copied something.")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
+            } else {
+                Text("No matches")
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var listBody: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 4) {
+                    let pinnedCount = pinnedItems.count
+                    ForEach(Array(visibleItems.enumerated()), id: \.element.persistentModelID) { idx, item in
+                        if shouldShowPinnedSection && pinnedCount > 0 && idx == pinnedCount && !recentItems.isEmpty {
+                            sectionHeader("Recent")
+                        }
+                        row(for: item, quickIdx: idx)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .onChange(of: selectedID) { _, newValue in
+                guard let newValue else { return }
+                withAnimation(.linear(duration: 0.08)) {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+        }
+    }
+
     private var statusBar: some View {
-        HStack(spacing: 12) {
-            Text("↑↓ Select")
-            Text("↵ Paste")
-            Text("⌘P Pin")
-            Text("⌫ Delete")
+        HStack(spacing: 10) {
+            shortcutChip("↑↓", "Select")
+            shortcutChip("↵", "Paste")
+            shortcutChip("⌘P", "Pin")
+            shortcutChip("⌫", "Delete")
             Spacer()
             Text("\(visibleItems.count)")
+                .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .liquidGlass(.regular, in: .capsule)
                 .accessibilityLabel("\(visibleItems.count) items")
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .liquidGlass(.regular, in: .capsule)
         .accessibilityElement(children: .contain)
+    }
+
+    private func shortcutChip(_ key: String, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            Text(key)
+                .font(.caption2.monospaced().weight(.semibold))
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text.uppercased())
             .font(.caption2.weight(.semibold))
+            .tracking(0.6)
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.top, 6)
-            .padding(.bottom, 2)
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
     }
 
     private func row(for item: ClipboardItem, quickIdx: Int?) -> some View {

@@ -9,41 +9,69 @@ struct PermissionsView: View {
     @State private var pollTimer: Timer?
 
     var body: some View {
-        VStack(spacing: 18) {
-            Image(systemName: "doc.on.clipboard.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(Color.accentColor)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.accentColor.opacity(0.22),
+                    Color.purple.opacity(0.12),
+                    Color.blue.opacity(0.14)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
 
-            Text("Welcome to NovaClipboard")
-                .font(.title2.bold())
+            VStack(spacing: 20) {
+                Image(systemName: "doc.on.clipboard.fill")
+                    .font(.system(size: 44, weight: .light))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 96, height: 96)
+                    .liquidGlass(.regular, in: .circle)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("NovaClipboard needs **Accessibility** permission to:")
-                Label("Paste items by simulating ⌘V into the active app", systemImage: "keyboard")
-                Label("Detect caret bounds so the panel appears next to the cursor", systemImage: "cursorarrow.rays")
-            }
-            .padding(.horizontal, 12)
+                Text("Welcome to NovaClipboard")
+                    .font(.title2.bold())
 
-            if isTrusted {
-                Label("Accessibility permission granted", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Button("Continue", action: onContinue)
-                    .keyboardShortcut(.defaultAction)
-            } else {
-                Button {
-                    openAccessibilityPane()
-                } label: {
-                    Label("Open System Settings", systemImage: "arrow.up.right.square")
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("NovaClipboard needs **Accessibility** permission to:")
+                        .font(.subheadline)
+                    Label("Paste items by simulating ⌘V into the active app", systemImage: "keyboard")
+                    Label("Detect caret bounds so the panel appears next to the cursor", systemImage: "cursorarrow.rays")
                 }
-                .controlSize(.large)
+                .font(.callout)
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .liquidGlass(.regular, in: .roundedRect(cornerRadius: 16))
+                .padding(.horizontal, 8)
 
-                Text("Waiting for permission…")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
+                if isTrusted {
+                    Label("Accessibility permission granted", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .liquidGlass(.regular, in: .capsule)
+                    Button(action: onContinue) {
+                        Text("Continue").frame(minWidth: 120)
+                    }
+                    .buttonStyle(.liquidGlass(tint: .accentColor, prominent: true))
+                    .keyboardShortcut(.defaultAction)
+                } else {
+                    Button {
+                        openAccessibilityPane()
+                    } label: {
+                        Label("Open System Settings", systemImage: "arrow.up.right.square")
+                            .frame(minWidth: 200)
+                    }
+                    .buttonStyle(.liquidGlass(tint: .accentColor, prominent: true))
+
+                    Text("Waiting for permission…")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
             }
+            .padding(30)
         }
-        .padding(30)
-        .frame(width: 460, height: 380)
+        .frame(width: 460, height: 420)
         .onAppear { startPolling() }
         .onDisappear { stopPolling() }
     }
