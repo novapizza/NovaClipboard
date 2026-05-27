@@ -3,7 +3,7 @@ import SwiftData
 
 @MainActor
 final class HistoryStore {
-    static let defaultLimit = 500
+    nonisolated(unsafe) static let defaultLimit = 500
 
     private let context: ModelContext
     var limit: Int

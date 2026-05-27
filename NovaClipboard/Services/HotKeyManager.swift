@@ -51,7 +51,7 @@ final class HotKeyManager {
             &eventHandler
         )
 
-        var hkID = EventHotKeyID(signature: HotKeyManager.signature, id: 1)
+        let hkID = EventHotKeyID(signature: HotKeyManager.signature, id: 1)
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(
             keyCombo.keyCode,

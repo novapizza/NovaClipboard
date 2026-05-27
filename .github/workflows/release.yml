@@ -24,7 +24,7 @@ jobs:
     environment: Production
 
     name: Build and Publish macOS
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 40
 
     steps:
