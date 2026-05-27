@@ -1,0 +1,209 @@
+name: Release
+
+# Triggered by pushing a version tag, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-mac:
+    environment: Production
+
+    name: Build and Publish macOS
+    runs-on: macos-15
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # ── Toolchain ────────────────────────────────────────────────────────────
+      - name: Install XcodeGen
+        run: brew install xcodegen && brew pin xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      # ── Version from tag ─────────────────────────────────────────────────────
+      - name: Extract version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      # ── Code-signing keychain ─────────────────────────────────────────────────
+      - name: Set up signing keychain
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KC_PASS=$(openssl rand -hex 32)
+
+          security create-keychain -p "$KC_PASS" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KC_PASS" "$KEYCHAIN_PATH"
+
+          trap 'rm -f /tmp/cert.p12' EXIT
+          [ -n "$CSC_LINK" ] || { echo "ERROR: CSC_LINK empty"; exit 1; }
+          [ -n "$CSC_KEY_PASSWORD" ] || { echo "ERROR: CSC_KEY_PASSWORD empty"; exit 1; }
+          echo "$CSC_LINK" | base64 -d > /tmp/cert.p12
+
+          security import /tmp/cert.p12 \
+            -P "$CSC_KEY_PASSWORD" \
+            -k "$KEYCHAIN_PATH" \
+            -A -T /usr/bin/codesign -T /usr/bin/security
+
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "$KC_PASS" \
+            "$KEYCHAIN_PATH"
+
+          # Add to user keychain search list so xcodebuild can find it
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+      # ── Build & archive ───────────────────────────────────────────────────────
+      - name: Archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -project NovaClipboard.xcodeproj \
+            -scheme NovaClipboard \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/NovaClipboard.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            ENABLE_HARDENED_RUNTIME=YES \
+            MARKETING_VERSION="$VERSION" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"
+          # Verify archive was created
+          [ -d "$RUNNER_TEMP/NovaClipboard.xcarchive" ] || { echo "ERROR: archive missing"; exit 1; }
+
+      # ── Export ────────────────────────────────────────────────────────────────
+      - name: Export archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cat > /tmp/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Developer ID Application</string>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/NovaClipboard.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist /tmp/ExportOptions.plist
+
+          [ -d "$RUNNER_TEMP/export/NovaClipboard.app" ] || { echo "ERROR: export missing"; exit 1; }
+
+      # ── Notarize app ─────────────────────────────────────────────────────────
+      - name: Notarize .app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          ditto -c -k --keepParent \
+            "$RUNNER_TEMP/export/NovaClipboard.app" \
+            /tmp/NovaClipboard-app.zip
+
+          xcrun notarytool submit /tmp/NovaClipboard-app.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          xcrun stapler staple "$RUNNER_TEMP/export/NovaClipboard.app"
+          xcrun stapler validate "$RUNNER_TEMP/export/NovaClipboard.app"
+
+      # ── Package DMG ───────────────────────────────────────────────────────────
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          DMG_PATH="$RUNNER_TEMP/NovaClipboard-$VERSION.dmg"
+
+          # create-dmg exits 2 on headless CI (AppleScript icon-positioning needs display)
+          # DMG is still created — gate on file existence, not exit code
+          create-dmg \
+            --volname "NovaClipboard $VERSION" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 425 180 \
+            "$DMG_PATH" \
+            "$RUNNER_TEMP/export/NovaClipboard.app" || true
+          [ -f "$DMG_PATH" ] || { echo "ERROR: DMG missing"; exit 1; }
+
+          echo "DMG_PATH=$DMG_PATH" >> $GITHUB_ENV
+
+      # ── Notarize DMG ─────────────────────────────────────────────────────────
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          xcrun stapler staple "$DMG_PATH"
+
+      # ── Upload to R2 ─────────────────────────────────────────────────────────
+      - name: Upload to R2
+        env:
+          # ── R2 is S3-compatible. Use provider: s3 with custom endpoint ────────────────────
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_RELEASES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_RELEASES_SECRET_ACCESS_KEY }}
+          R2_RELEASES_ACCOUNT_ID: ${{ secrets.R2_RELEASES_ACCOUNT_ID }}
+          R2_RELEASES_BUCKET: ${{ secrets.R2_RELEASES_BUCKET }}
+        run: |
+          aws s3 cp "$DMG_PATH" \
+            "s3://$R2_RELEASES_BUCKET/NovaClipboard-$VERSION.dmg" \
+            --endpoint-url "https://$R2_RELEASES_ACCOUNT_ID.r2.cloudflarestorage.com"
+
+      # ── GitHub Release ────────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Idempotent: upload to existing release on re-run, create on first run
+          if gh release view "$GITHUB_REF_NAME" &>/dev/null; then
+            gh release upload "$GITHUB_REF_NAME" "$DMG_PATH" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "NovaClipboard $GITHUB_REF_NAME" \
+              --generate-notes \
+              "$DMG_PATH"
+          fi
+
+      # ── Cleanup ───────────────────────────────────────────────────────────────
+      - name: Clean up keychain
+        if: always()
+        run: |
+          security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
