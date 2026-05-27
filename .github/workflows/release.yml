@@ -2,10 +2,15 @@ name: Release
 
 # Triggered by pushing a version tag, e.g.:
 #   git tag v1.0.0 && git push origin v1.0.0
+#on:
+#  push:
+#    tags:
+#      - 'v*.*.*'
+
 on:
   push:
-    tags:
-      - 'v*.*.*'
+    branches:
+      - main
 
 permissions:
   contents: write
