@@ -35,11 +35,6 @@ targets:
           - "**/.gitkeep"
     dependencies:
       - package: Sparkle
-    info:
-      path: NovaClipboard/Resources/Info.plist
-      properties:
-        LSUIElement: true
-        NSHumanReadableCopyright: "Copyright © 2026 Creative Force. All rights reserved."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.haunc.NovaClipboard
