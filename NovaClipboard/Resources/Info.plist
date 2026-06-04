@@ -15,12 +15,20 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Creative Force. All rights reserved.</string>
+	<key>SUFeedURL</key>
+	<string>https://pub-4ab8b2cc0203430fbd129ff8f2b54b00.r2.dev/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>GvwA2ib22SwaKO/Eghp7J0EBf9qLNF1Zh6gZyksxUqo=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

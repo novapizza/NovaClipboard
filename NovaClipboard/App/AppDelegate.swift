@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var retentionTimer: Timer?
     private var cancellables: Set<AnyCancellable> = []
     private var permissionMonitorTimer: Timer?
+    private let updateController = UpdateController.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         appLogger.info("NovaClipboard launching, phase-2 build")
@@ -36,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyHistoryLimit()
         startRetentionSweep()
         startPermissionMonitor()
+        _ = updateController
 
         if !settings.hasOnboarded || !AXIsProcessTrusted() {
             showOnboarding()
@@ -78,6 +80,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
+
+        let updateItem = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(UpdateController.checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        updateItem.target = updateController
+        menu.addItem(updateItem)
 
         menu.addItem(NSMenuItem.separator())
 

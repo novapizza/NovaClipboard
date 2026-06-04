@@ -209,6 +209,14 @@ private struct AboutTab: View {
                 .buttonStyle(.liquidGlass())
             }
             .font(.callout)
+
+            Button {
+                UpdateController.shared.checkForUpdates(nil)
+            } label: {
+                Label("Check for Updates…", systemImage: "arrow.down.circle")
+            }
+            .buttonStyle(.liquidGlass())
+            .font(.callout)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

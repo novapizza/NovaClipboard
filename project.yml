@@ -10,11 +10,18 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    # CI overrides these at archive time from the git tag.
+    # Local dev builds use these as-is.
+    MARKETING_VERSION: "0.0.0-dev"
+    CURRENT_PROJECT_VERSION: "0"
     ENABLE_HARDENED_RUNTIME: NO
     CODE_SIGN_STYLE: Automatic
     CODE_SIGN_IDENTITY: "Apple Development"
+
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.0"
 
 targets:
   NovaClipboard:
@@ -26,6 +33,8 @@ targets:
         excludes:
           - "**/.DS_Store"
           - "**/.gitkeep"
+    dependencies:
+      - package: Sparkle
     info:
       path: NovaClipboard/Resources/Info.plist
       properties:
