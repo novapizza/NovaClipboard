@@ -19,6 +19,13 @@ final class ClipboardMonitor {
     private var timer: Timer?
     private var lastChangeCount: Int
 
+    /// Background queue for hashing and disk writes so large images don't block the 300ms poll
+    /// or the main thread that owns SwiftData.
+    private let processingQueue = DispatchQueue(
+        label: "io.haunc.NovaClipboard.ClipboardMonitor.processing",
+        qos: .utility
+    )
+
     var onNewItem: ((ClipboardItem) -> Void)?
 
     init(pasteboard: NSPasteboard = .general, pollInterval: TimeInterval = 0.3) {
@@ -65,8 +72,8 @@ final class ClipboardMonitor {
             onNewItem?(fileItem)
             return
         }
-        if let imageItem = readImage(bundleID: bundleID) {
-            onNewItem?(imageItem)
+        if let imageData = readImageData() {
+            processImageAsync(data: imageData, bundleID: bundleID)
             return
         }
         if let textItem = readText(bundleID: bundleID) {
@@ -96,39 +103,47 @@ final class ClipboardMonitor {
         return ClipboardItem.file(urls: urls, sourceBundleID: bundleID)
     }
 
-    private func readImage(bundleID: String?) -> ClipboardItem? {
+    /// Reads PNG/TIFF bytes off the pasteboard but defers hashing and disk writes — those run
+    /// in `processImageAsync` so the polling loop and main thread stay responsive on big copies.
+    private func readImageData() -> Data? {
         let pngType = NSPasteboard.PasteboardType("public.png")
         let tiffType = NSPasteboard.PasteboardType("public.tiff")
 
-        var data: Data?
         if let png = pasteboard.data(forType: pngType) {
-            data = png
-        } else if let tiff = pasteboard.data(forType: tiffType) {
-            // Convert TIFF → PNG for consistent storage
-            if let rep = NSBitmapImageRep(data: tiff) {
-                data = rep.representation(using: .png, properties: [:])
+            return png
+        }
+        if let tiff = pasteboard.data(forType: tiffType),
+           let rep = NSBitmapImageRep(data: tiff) {
+            return rep.representation(using: .png, properties: [:])
+        }
+        return nil
+    }
+
+    private func processImageAsync(data: Data, bundleID: String?) {
+        processingQueue.async { [weak self] in
+            let id = UUID()
+            let inline = data.count < ImageStore.inlineLimitBytes
+            let path = inline ? nil : ImageStore.write(data: data, id: id)
+            let checksum = Checksum.sha256(data)
+
+            let sizeKB = Double(data.count) / 1024.0
+            let preview = sizeKB < 1024
+                ? String(format: "Image · %.0f KB", sizeKB)
+                : String(format: "Image · %.1f MB", sizeKB / 1024.0)
+
+            let item = ClipboardItem(
+                id: id,
+                type: .image,
+                preview: preview,
+                imageBlob: inline ? data : nil,
+                imagePath: path,
+                sourceBundleID: bundleID,
+                checksum: checksum
+            )
+            DispatchQueue.main.async {
+                self?.onNewItem?(item)
             }
         }
-
-        guard let data else { return nil }
-        let id = UUID()
-        let inline = data.count < ImageStore.inlineLimitBytes
-        let path = inline ? nil : ImageStore.write(data: data, id: id)
-
-        let sizeKB = Double(data.count) / 1024.0
-        let preview = sizeKB < 1024
-            ? String(format: "Image · %.0f KB", sizeKB)
-            : String(format: "Image · %.1f MB", sizeKB / 1024.0)
-
-        return ClipboardItem(
-            id: id,
-            type: .image,
-            preview: preview,
-            imageBlob: inline ? data : nil,
-            imagePath: path,
-            sourceBundleID: bundleID,
-            checksum: Checksum.sha256(data)
-        )
     }
 
     private func readText(bundleID: String?) -> ClipboardItem? {

@@ -27,17 +27,28 @@ final class PasteEngine {
             pasteboard.setString(content, forType: .string)
 
         case .image:
-            guard let image = ImageStore.loadImage(blob: item.imageBlob, path: item.imagePath),
-                  let tiff = image.tiffRepresentation else {
+            // ClipboardMonitor + screenshot ingestion normalize image bytes to PNG before storage,
+            // so write the stored bytes verbatim — re-encoding through TIFF wastes CPU and can be
+            // lossy for some PNG color profiles.
+            let pngData: Data?
+            if let blob = item.imageBlob {
+                pngData = blob
+            } else if let path = item.imagePath {
+                pngData = try? Data(contentsOf: URL(fileURLWithPath: path))
+            } else {
+                pngData = nil
+            }
+            guard let pngData else {
                 logger.error("paste() aborted: image data missing")
                 return
             }
             let pngType = NSPasteboard.PasteboardType("public.png")
-            let tiffType = NSPasteboard.PasteboardType("public.tiff")
-            pasteboard.setData(tiff, forType: tiffType)
-            if let rep = NSBitmapImageRep(data: tiff),
-               let png = rep.representation(using: .png, properties: [:]) {
-                pasteboard.setData(png, forType: pngType)
+            pasteboard.setData(pngData, forType: pngType)
+            // Derive TIFF as a fallback for legacy apps that only accept it.
+            if let rep = NSBitmapImageRep(data: pngData),
+               let tiff = rep.tiffRepresentation {
+                let tiffType = NSPasteboard.PasteboardType("public.tiff")
+                pasteboard.setData(tiff, forType: tiffType)
             }
 
         case .file:
@@ -125,6 +136,11 @@ final class PasteEngine {
 /// rewritten verbatim later. Used by `PasteEngine` to restore the user's
 /// pre-existing clipboard contents after simulating Cmd+V.
 struct PasteboardSnapshot {
+    /// Skip restoring any single representation larger than this to avoid holding a multi-megabyte
+    /// copy of e.g. a 50MB image in RAM for the 500ms paste window. The user keeps text/URLs
+    /// (the usual "I'm in the middle of pasting something" use case); huge media may be lost.
+    static let maxBytesPerType = 4 * 1_024 * 1_024
+
     private struct Entry {
         let types: [NSPasteboard.PasteboardType]
         let data: [NSPasteboard.PasteboardType: Data]
@@ -136,7 +152,7 @@ struct PasteboardSnapshot {
         self.entries = items.map { item in
             var data: [NSPasteboard.PasteboardType: Data] = [:]
             for t in item.types {
-                if let d = item.data(forType: t) {
+                if let d = item.data(forType: t), d.count <= PasteboardSnapshot.maxBytesPerType {
                     data[t] = d
                 }
             }

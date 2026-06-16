@@ -3,8 +3,13 @@ import SwiftData
 import AppKit
 
 struct HistoryPanelView: View {
+    /// Cap on unpinned rows hydrated into the panel. Bigger histories still live in the
+    /// database; the panel just never renders more than this many recents at once.
+    private static let recentFetchLimit = 200
+
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ClipboardItem.createdAt, order: .reverse) private var allItems: [ClipboardItem]
+    @Query private var pinnedItems: [ClipboardItem]
+    @Query private var recentItems: [ClipboardItem]
 
     @State private var selectedID: PersistentIdentifier?
     @State private var showClearAllConfirm: Bool = false
@@ -12,6 +17,29 @@ struct HistoryPanelView: View {
     let store: HistoryStore
     let onPaste: (ClipboardItem) -> Void
     let onDismiss: () -> Void
+
+    init(
+        store: HistoryStore,
+        onPaste: @escaping (ClipboardItem) -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.store = store
+        self.onPaste = onPaste
+        self.onDismiss = onDismiss
+
+        let pinnedDescriptor = FetchDescriptor<ClipboardItem>(
+            predicate: #Predicate { $0.isPinned },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        _pinnedItems = Query(pinnedDescriptor)
+
+        var recentDescriptor = FetchDescriptor<ClipboardItem>(
+            predicate: #Predicate { !$0.isPinned },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        recentDescriptor.fetchLimit = HistoryPanelView.recentFetchLimit
+        _recentItems = Query(recentDescriptor)
+    }
 
     var body: some View {
         ZStack {
@@ -192,14 +220,6 @@ struct HistoryPanelView: View {
     }
 
     // MARK: - Items
-
-    private var pinnedItems: [ClipboardItem] {
-        allItems.filter { $0.isPinned }
-    }
-
-    private var recentItems: [ClipboardItem] {
-        allItems.filter { !$0.isPinned }
-    }
 
     private var visibleItems: [ClipboardItem] {
         pinnedItems + recentItems
