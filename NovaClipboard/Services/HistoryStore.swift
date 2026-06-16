@@ -17,6 +17,9 @@ final class HistoryStore {
     func insert(_ item: ClipboardItem) -> ClipboardItem {
         if let dup = findRecentDuplicate(checksum: item.checksum) {
             dup.createdAt = Date()
+            // Refresh source attribution to the most recent copy so blocklist /
+            // analytics reflect where the content came from this time.
+            dup.sourceBundleID = item.sourceBundleID
             // Free up the new item's external image file (it was written eagerly by Monitor).
             ImageStore.deleteFile(at: item.imagePath)
             try? context.save()

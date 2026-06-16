@@ -1,53 +1,15 @@
 import SwiftUI
 import SwiftData
 import AppKit
-import Combine
-
-enum HistoryFilter: Hashable, Identifiable {
-    case all
-    case type(ItemType)
-    case pinned
-
-    var id: String {
-        switch self {
-        case .all: return "all"
-        case .pinned: return "pinned"
-        case .type(let t): return "type-\(t.rawValue)"
-        }
-    }
-
-    var title: String {
-        switch self {
-        case .all: return "All"
-        case .pinned: return "Pinned"
-        case .type(.text), .type(.richText): return "Text"
-        case .type(.image): return "Image"
-        case .type(.link): return "Link"
-        case .type(.file): return "File"
-        }
-    }
-
-    static let bar: [HistoryFilter] = [
-        .all,
-        .type(.text),
-        .type(.image),
-        .type(.link),
-        .pinned
-    ]
-}
 
 struct HistoryPanelView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ClipboardItem.createdAt, order: .reverse) private var allItems: [ClipboardItem]
 
     @State private var selectedID: PersistentIdentifier?
-    @State private var query: String = ""
-    @State private var debouncedQuery: String = ""
-    @State private var filter: HistoryFilter = .all
-    @State private var searchFocused: Bool = false
-    @State private var debounceTask: Task<Void, Never>?
     @State private var showClearAllConfirm: Bool = false
 
+    let store: HistoryStore
     let onPaste: (ClipboardItem) -> Void
     let onDismiss: () -> Void
 
@@ -73,20 +35,8 @@ struct HistoryPanelView: View {
         }
         .frame(width: 380, height: 480)
         .background(KeyHandlerView(actions: keyActions))
-        .onAppear {
-            debouncedQuery = query
-            ensureSelection()
-        }
-        .onChange(of: query) { _, newValue in
-            debounceTask?.cancel()
-            debounceTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                guard !Task.isCancelled else { return }
-                debouncedQuery = newValue
-            }
-        }
-        .onChange(of: visibleItems) { _, _ in ensureSelection() }
-        .onChange(of: filter) { _, _ in ensureSelection() }
+        .onAppear { ensureSelection() }
+        .onChange(of: visibleIDs) { _, _ in ensureSelection() }
     }
 
     private var panelBackground: some View {
@@ -131,45 +81,30 @@ struct HistoryPanelView: View {
             isPresented: $showClearAllConfirm,
             titleVisibility: .visible
         ) {
-            Button("Clear All", role: .destructive) { clearAllNonPinned() }
+            Button("Clear All", role: .destructive) { store.clearAll(keepPinned: true) }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Pinned items will be kept.")
         }
     }
 
-    private func clearAllNonPinned() {
-        let toDelete = allItems.filter { !$0.isPinned }
-        for item in toDelete {
-            ImageStore.deleteFile(at: item.imagePath)
-            ImageThumbnailCache.shared.invalidate(id: item.id)
-            modelContext.delete(item)
-        }
-        try? modelContext.save()
-    }
-
     private var emptyState: some View {
         VStack(spacing: 6) {
-            if query.isEmpty {
-                Image(systemName: "doc.on.clipboard")
-                    .font(.system(size: 28, weight: .light))
-                    .foregroundStyle(.secondary)
-                    .padding(14)
-                    .liquidGlass(.regular, in: .circle)
-                    .padding(.bottom, 4)
-                Text("Nothing here")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                Text("You'll see your clipboard history here once you've copied something.")
-                    .font(.subheadline)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 24)
-            } else {
-                Text("No matches")
-                    .foregroundStyle(.tertiary)
-            }
+            Image(systemName: "doc.on.clipboard")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(.secondary)
+                .padding(14)
+                .liquidGlass(.regular, in: .circle)
+                .padding(.bottom, 4)
+            Text("Nothing here")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            Text("You'll see your clipboard history here once you've copied something.")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -180,7 +115,7 @@ struct HistoryPanelView: View {
                 LazyVStack(spacing: 4) {
                     let pinnedCount = pinnedItems.count
                     ForEach(Array(visibleItems.enumerated()), id: \.element.persistentModelID) { idx, item in
-                        if shouldShowPinnedSection && pinnedCount > 0 && idx == pinnedCount && !recentItems.isEmpty {
+                        if pinnedCount > 0 && idx == pinnedCount && !recentItems.isEmpty {
                             sectionHeader("Recent")
                         }
                         row(for: item, quickIdx: idx)
@@ -245,8 +180,8 @@ struct HistoryPanelView: View {
             item: item,
             isSelected: item.persistentModelID == selectedID,
             quickPasteIndex: quickIdx,
-            onTogglePin: { togglePin(for: item) },
-            onDelete: { delete(item) }
+            onTogglePin: { store.togglePin(item) },
+            onDelete: { store.delete(item) }
         )
         .id(item.persistentModelID)
         .contentShape(Rectangle())
@@ -256,50 +191,24 @@ struct HistoryPanelView: View {
         }
     }
 
-    // MARK: - Filtering
-
-    private var shouldShowPinnedSection: Bool {
-        // Only show as a separate "Pinned" section when not already filtering by pinned.
-        if case .pinned = filter { return false }
-        return true
-    }
-
-    private var filteredItems: [ClipboardItem] {
-        let q = debouncedQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        return allItems.filter { item in
-            // Type / pinned filter
-            switch filter {
-            case .all: break
-            case .pinned where !item.isPinned: return false
-            case .pinned: break
-            case .type(let t):
-                if t == .text {
-                    if item.type != .text && item.type != .richText { return false }
-                } else if item.type != t { return false }
-            }
-            // Query filter
-            if !q.isEmpty {
-                if !item.preview.localizedCaseInsensitiveContains(q) { return false }
-            }
-            return true
-        }
-    }
+    // MARK: - Items
 
     private var pinnedItems: [ClipboardItem] {
-        filteredItems.filter { $0.isPinned }
+        allItems.filter { $0.isPinned }
     }
 
     private var recentItems: [ClipboardItem] {
-        if case .pinned = filter { return [] }
-        return filteredItems.filter { !$0.isPinned }
+        allItems.filter { !$0.isPinned }
     }
 
     private var visibleItems: [ClipboardItem] {
-        if case .pinned = filter {
-            return pinnedItems
-        }
-        // pinned first (when visible), then recent — matches displayed order
-        return shouldShowPinnedSection ? (pinnedItems + recentItems) : filteredItems
+        pinnedItems + recentItems
+    }
+
+    /// Stable identity for `.onChange` so we don't re-fire on every body
+    /// re-evaluation just because `visibleItems` is recomputed.
+    private var visibleIDs: [PersistentIdentifier] {
+        visibleItems.map(\.persistentModelID)
     }
 
     private func ensureSelection() {
@@ -316,9 +225,8 @@ struct HistoryPanelView: View {
             onMoveDown: { moveSelection(by: 1) },
             onConfirm: confirmSelection,
             onCancel: onDismiss,
-            onTogglePin: togglePin,
+            onTogglePin: togglePinSelected,
             onDelete: deleteSelected,
-            onFocusSearch: { searchFocused = true },
             onQuickPaste: quickPaste
         )
     }
@@ -343,105 +251,19 @@ struct HistoryPanelView: View {
         onPaste(items[index])
     }
 
-    private func togglePin() {
+    private func togglePinSelected() {
         guard let item = currentItem() else { return }
-        togglePin(for: item)
-    }
-
-    private func togglePin(for item: ClipboardItem) {
-        item.isPinned.toggle()
-        try? modelContext.save()
+        store.togglePin(item)
     }
 
     private func deleteSelected() {
         guard let item = currentItem() else { return }
-        delete(item)
-    }
-
-    private func delete(_ item: ClipboardItem) {
-        ImageStore.deleteFile(at: item.imagePath)
-        ImageThumbnailCache.shared.invalidate(id: item.id)
-        modelContext.delete(item)
-        try? modelContext.save()
+        store.delete(item)
     }
 
     private func currentItem() -> ClipboardItem? {
         guard let selectedID else { return nil }
         return visibleItems.first(where: { $0.persistentModelID == selectedID })
-    }
-}
-
-// MARK: - Search bar
-
-private struct SearchBar: View {
-    @Binding var query: String
-    @Binding var isFocused: Bool
-    @FocusState private var fieldFocused: Bool
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("Search", text: $query)
-                .textFieldStyle(.plain)
-                .focused($fieldFocused)
-                .accessibilityLabel("Search clipboard history")
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.secondary.opacity(0.12))
-        )
-        .onChange(of: isFocused) { _, newValue in
-            if newValue { fieldFocused = true; isFocused = false }
-        }
-    }
-}
-
-// MARK: - Filter chips
-
-private struct FilterChipsBar: View {
-    @Binding var filter: HistoryFilter
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(HistoryFilter.bar) { f in
-                Chip(title: f.title, selected: f == filter) { filter = f }
-            }
-            Spacer(minLength: 0)
-        }
-    }
-}
-
-private struct Chip: View {
-    let title: String
-    let selected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            Text(title)
-                .font(.caption)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(selected ? Color.accentColor : Color.secondary.opacity(0.15))
-                )
-                .foregroundStyle(selected ? Color.white : Color.primary)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Filter: \(title)")
-        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }
 }
 
@@ -454,7 +276,6 @@ struct KeyActions {
     var onCancel: () -> Void
     var onTogglePin: () -> Void
     var onDelete: () -> Void
-    var onFocusSearch: () -> Void
     var onQuickPaste: (Int) -> Void
 }
 
@@ -499,12 +320,6 @@ private final class KeyCaptureView: NSView {
             actions.onQuickPaste(digit - 1)
             return
         }
-
-        // TEMP: ⌘F focus search disabled while the search bar is hidden.
-        // if cmd, event.charactersIgnoringModifiers == "f" {
-        //     actions.onFocusSearch()
-        //     return
-        // }
 
         // ⌘P toggle pin
         if cmd, event.charactersIgnoringModifiers == "p" {

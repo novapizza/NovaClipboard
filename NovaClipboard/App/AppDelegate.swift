@@ -120,9 +120,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupPanelController() {
-        guard let modelContainer else { return }
+        guard let modelContainer, let historyStore else { return }
         panelController = PanelController(
             modelContainer: modelContainer,
+            historyStore: historyStore,
             anchorResolver: anchorResolver,
             settings: settings,
             onPaste: { [weak self] item in

@@ -49,7 +49,7 @@ private struct GeneralTab: View {
 
             Toggle("Skip macOS preview thumbnail (instant capture)",
                    isOn: $settings.disableScreenshotPreview)
-                .help("Disables the floating screenshot preview so files land on Desktop immediately. Menu bar may flicker once when toggled.")
+                .help("Disables the floating screenshot preview so files land on Desktop immediately. Takes effect on the next ⌘⇧3/4/5 capture.")
                 .disabled(!settings.captureScreenshots)
 
             HotKeyPicker(combo: $settings.hotKey)
@@ -171,9 +171,11 @@ private struct PrivacyTab: View {
                     .frame(minHeight: 100, maxHeight: 160)
                 }
             }
+            #if DEBUG
             Toggle("Ignore password fields", isOn: $settings.ignorePasswordFields)
                 .help("Active in Phase 3 — currently placeholder.")
                 .disabled(true)
+            #endif
         }
         .formStyle(.grouped)
     }

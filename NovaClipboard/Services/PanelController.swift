@@ -10,6 +10,7 @@ final class PanelController {
     static let panelSize = CGSize(width: 380, height: 480)
 
     private let modelContainer: ModelContainer
+    private let historyStore: HistoryStore
     private let anchorResolver: PanelAnchorResolver
     private let settings: AppSettings
     private let onPaste: (ClipboardItem) -> Void
@@ -18,11 +19,13 @@ final class PanelController {
 
     init(
         modelContainer: ModelContainer,
+        historyStore: HistoryStore,
         anchorResolver: PanelAnchorResolver,
         settings: AppSettings,
         onPaste: @escaping (ClipboardItem) -> Void
     ) {
         self.modelContainer = modelContainer
+        self.historyStore = historyStore
         self.anchorResolver = anchorResolver
         self.settings = settings
         self.onPaste = onPaste
@@ -73,6 +76,7 @@ final class PanelController {
 
     private func makePanel() -> NSPanel {
         let contentView = HistoryPanelView(
+            store: historyStore,
             onPaste: { [weak self] item in
                 guard let self else { return }
                 panelLogger.info("PanelController.onPaste from row click/enter")

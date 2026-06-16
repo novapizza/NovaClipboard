@@ -46,7 +46,7 @@ final class AppSettings: ObservableObject {
     private let defaults: UserDefaults
 
     @Published var hotKey: KeyCombo {
-        didSet { persist(hotKey, key: .hotKey) }
+        didSet { persistHotKey(hotKey) }
     }
 
     @Published var panelPosition: PanelPositionPreference {
@@ -84,16 +84,24 @@ final class AppSettings: ObservableObject {
     }
 
     @Published var captureScreenshots: Bool {
-        didSet { defaults.set(captureScreenshots, forKey: Key.captureScreenshots.rawValue) }
+        didSet {
+            defaults.set(captureScreenshots, forKey: Key.captureScreenshots.rawValue)
+            // OS-level screenshot preview override is owned by NovaClipboard only while
+            // capture is enabled. Release it when capture is off so the user isn't left
+            // with a hidden system tweak after disabling the feature.
+            ScreenshotPreviewPreference.setDisabled(captureScreenshots && disableScreenshotPreview)
+        }
     }
 
     /// When true, suppresses macOS' floating screenshot preview so the file lands on disk
     /// immediately. Backed by our own UserDefaults key and mirrored into
-    /// `com.apple.screencapture show-thumbnail`.
+    /// `com.apple.screencapture show-thumbnail` (only while `captureScreenshots` is on).
     @Published var disableScreenshotPreview: Bool {
         didSet {
             defaults.set(disableScreenshotPreview, forKey: Key.disableScreenshotPreview.rawValue)
-            ScreenshotPreviewPreference.setDisabled(disableScreenshotPreview)
+            if captureScreenshots {
+                ScreenshotPreviewPreference.setDisabled(disableScreenshotPreview)
+            }
         }
     }
 
@@ -142,7 +150,7 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    private func persist(_ combo: KeyCombo, key: Key) {
+    private func persistHotKey(_ combo: KeyCombo) {
         defaults.set(Int(combo.keyCode), forKey: Key.hotKeyCode.rawValue)
         defaults.set(Int(combo.modifiers), forKey: Key.hotKeyMods.rawValue)
     }
@@ -156,7 +164,6 @@ final class AppSettings: ObservableObject {
     }
 
     private enum Key: String {
-        case hotKey
         case hotKeyCode
         case hotKeyMods
         case panelPosition
