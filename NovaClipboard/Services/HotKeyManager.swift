@@ -1,5 +1,8 @@
 import AppKit
 import Carbon.HIToolbox
+import os
+
+private let hotKeyLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "HotKeyManager")
 
 final class HotKeyManager {
     private static let signature: FourCharCode = {
@@ -54,7 +57,7 @@ final class HotKeyManager {
         )
 
         guard installStatus == noErr else {
-            NSLog("HotKeyManager: InstallEventHandler failed with status \(installStatus)")
+            hotKeyLogger.error("InstallEventHandler failed with status \(installStatus, privacy: .public)")
             eventHandler = nil
             self.handler = nil
             return false
@@ -74,7 +77,7 @@ final class HotKeyManager {
             hotKeyRef = ref
             return true
         } else {
-            NSLog("HotKeyManager: RegisterEventHotKey failed with status \(status)")
+            hotKeyLogger.error("RegisterEventHotKey failed with status \(status, privacy: .public)")
             if let handler = eventHandler {
                 RemoveEventHandler(handler)
                 eventHandler = nil

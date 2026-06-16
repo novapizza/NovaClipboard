@@ -37,7 +37,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyHistoryLimit()
         startRetentionSweep()
         startPermissionMonitor()
-        _ = updateController
 
         if !settings.hasOnboarded || !AXIsProcessTrusted() {
             showOnboarding()

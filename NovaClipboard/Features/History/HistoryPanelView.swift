@@ -204,16 +204,22 @@ struct HistoryPanelView: View {
     }
 
     private func row(for item: ClipboardItem, quickIdx: Int?) -> some View {
-        HistoryItemRow(
-            item: item,
-            isSelected: item.persistentModelID == selectedID,
-            quickPasteIndex: quickIdx,
-            onTogglePin: { store.togglePin(item) },
-            onDelete: { store.delete(item) }
-        )
+        // Wrap in a `.plain`-styled Button (rather than `.onTapGesture`) so the
+        // nested pin/delete buttons take unambiguous priority on their hit-test
+        // rects — SwiftUI's gesture arbitration favors the inner Button.
+        Button {
+            onPaste(item)
+        } label: {
+            HistoryItemRow(
+                item: item,
+                isSelected: item.persistentModelID == selectedID,
+                quickPasteIndex: quickIdx,
+                onTogglePin: { store.togglePin(item) },
+                onDelete: { store.delete(item) }
+            )
+        }
+        .buttonStyle(.plain)
         .id(item.persistentModelID)
-        .contentShape(Rectangle())
-        .onTapGesture { onPaste(item) }
         .onHover { hovering in
             if hovering { selectedID = item.persistentModelID }
         }

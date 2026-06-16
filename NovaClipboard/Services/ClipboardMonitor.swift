@@ -48,6 +48,7 @@ final class ClipboardMonitor {
         timer = nil
     }
 
+    /// Test-only hook: drives one poll cycle without waiting for the timer.
     func pollNow() {
         poll()
     }

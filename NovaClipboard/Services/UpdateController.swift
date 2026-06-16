@@ -7,8 +7,6 @@ final class UpdateController: NSObject {
 
     private let controller: SPUStandardUpdaterController
 
-    var updater: SPUUpdater { controller.updater }
-
     override init() {
         controller = SPUStandardUpdaterController(
             startingUpdater: true,

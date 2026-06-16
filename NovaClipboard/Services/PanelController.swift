@@ -101,7 +101,8 @@ final class PanelController {
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.hidesOnDeactivate = false
-        panel.becomesKeyOnlyIfNeeded = false
+        // Key-window behavior is governed by `HistoryPanel.canBecomeKey` below;
+        // setting `becomesKeyOnlyIfNeeded` here conflicts with `.nonactivatingPanel`.
         panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.backgroundColor = .clear

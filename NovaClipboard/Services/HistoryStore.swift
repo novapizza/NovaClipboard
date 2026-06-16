@@ -3,12 +3,10 @@ import SwiftData
 
 @MainActor
 final class HistoryStore {
-    nonisolated(unsafe) static let defaultLimit = 500
-
     private let context: ModelContext
     var limit: Int
 
-    init(context: ModelContext, limit: Int = HistoryStore.defaultLimit) {
+    init(context: ModelContext, limit: Int) {
         self.context = context
         self.limit = limit
     }
@@ -65,20 +63,6 @@ final class HistoryStore {
         if let limit {
             descriptor.fetchLimit = limit
         }
-        return (try? context.fetch(descriptor)) ?? []
-    }
-
-    func search(query: String, type: ItemType? = nil, pinnedOnly: Bool = false) -> [ClipboardItem] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let typeRaw = type?.rawValue
-        let descriptor = FetchDescriptor<ClipboardItem>(
-            predicate: #Predicate { item in
-                (typeRaw == nil || item.typeRaw == typeRaw!) &&
-                (!pinnedOnly || item.isPinned) &&
-                (trimmed.isEmpty || item.preview.localizedStandardContains(trimmed))
-            },
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-        )
         return (try? context.fetch(descriptor)) ?? []
     }
 

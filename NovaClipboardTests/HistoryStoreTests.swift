@@ -88,25 +88,6 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(all.filter { !$0.isPinned }.count, 5)
     }
 
-    func testSearchByQuery() {
-        store.insert(ClipboardItem.text("apple banana"))
-        store.insert(ClipboardItem.text("hello world"))
-        store.insert(ClipboardItem.text("apple pie"))
-
-        let results = store.search(query: "apple")
-        XCTAssertEqual(results.count, 2)
-        XCTAssertTrue(results.allSatisfy { $0.preview.contains("apple") })
-    }
-
-    func testSearchByType() {
-        store.insert(ClipboardItem.text("just text"))
-        store.insert(ClipboardItem.link("https://example.com"))
-
-        let links = store.search(query: "", type: .link)
-        XCTAssertEqual(links.count, 1)
-        XCTAssertEqual(links.first?.type, .link)
-    }
-
     func testDedupAcrossRecentHistory() {
         let first = store.insert(ClipboardItem.text("alpha"))
         let firstDate = first.createdAt
@@ -121,13 +102,4 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertGreaterThan(touched.createdAt, firstDate)
     }
 
-    func testSearchPinnedOnly() {
-        let pinned = store.insert(ClipboardItem.text("important"))
-        store.togglePin(pinned)
-        store.insert(ClipboardItem.text("not important"))
-
-        let result = store.search(query: "", pinnedOnly: true)
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.preview, "important")
-    }
 }

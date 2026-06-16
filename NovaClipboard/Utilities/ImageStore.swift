@@ -5,7 +5,10 @@ import os
 private let imageStoreLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "ImageStore")
 
 enum ImageStore {
-    static let inlineLimitBytes = 1_024 * 1_024
+    /// Aligned with SwiftData's own external-storage spill threshold (~128 KB) so the
+    /// `@Attribute(.externalStorage)` on `imageBlob` doesn't silently duplicate the
+    /// disk-spill that our `imagePath` tier already performs for larger images.
+    static let inlineLimitBytes = 128 * 1_024
 
     static var imagesDirectory: URL {
         let fm = FileManager.default
@@ -22,7 +25,8 @@ enum ImageStore {
         return dir
     }
 
-    /// Persists image data — inline (< 1MB) or to disk as PNG file. Returns the on-disk path if a file was written.
+    /// Persists image data to disk as a PNG file when the blob exceeds `inlineLimitBytes`.
+    /// Returns the on-disk path if a file was written; otherwise nil (callers keep it inline).
     @discardableResult
     static func write(data: Data, id: UUID) -> String? {
         guard data.count >= inlineLimitBytes else { return nil }
