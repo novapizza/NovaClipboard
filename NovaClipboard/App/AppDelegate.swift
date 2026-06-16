@@ -62,7 +62,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             modelContainer = container
             historyStore = HistoryStore(context: container.mainContext, limit: settings.maxItems)
         } catch {
-            NSLog("Failed to create ModelContainer: \(error)")
+            appLogger.error("Failed to create ModelContainer: \(error.localizedDescription, privacy: .public)")
+            let alert = NSAlert()
+            alert.alertStyle = .critical
+            alert.messageText = "NovaClipboard cannot start"
+            alert.informativeText = "The clipboard database could not be opened.\n\n\(error.localizedDescription)\n\nThe app will now quit."
+            alert.addButton(withTitle: "Quit")
+            alert.runModal()
+            NSApp.terminate(nil)
         }
     }
 
@@ -240,6 +247,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func applyHistoryLimit() {
         historyStore?.limit = settings.maxItems
+        historyStore?.evictOverflowIfNeeded()
     }
 
     private func startRetentionSweep() {

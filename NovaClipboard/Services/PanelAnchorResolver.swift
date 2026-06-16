@@ -96,7 +96,8 @@ final class PanelAnchorResolver {
             kAXFocusedUIElementAttribute as CFString,
             &focused
         )
-        guard err == .success, let value = focused else { return nil }
+        guard err == .success, let value = focused,
+              CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
         let element = value as! AXUIElement
         AXUIElementSetMessagingTimeout(element, PanelAnchorResolver.axMessagingTimeout)
         return element
@@ -109,7 +110,8 @@ final class PanelAnchorResolver {
             kAXSelectedTextRangeAttribute as CFString,
             &rangeValue
         )
-        guard rangeErr == .success, let rv = rangeValue else { return nil }
+        guard rangeErr == .success, let rv = rangeValue,
+              CFGetTypeID(rv) == AXValueGetTypeID() else { return nil }
         var range = CFRange()
         guard AXValueGetValue(rv as! AXValue, .cfRange, &range) else { return nil }
 
@@ -120,7 +122,8 @@ final class PanelAnchorResolver {
             rv,
             &boundsValue
         )
-        guard boundsErr == .success, let bv = boundsValue else { return nil }
+        guard boundsErr == .success, let bv = boundsValue,
+              CFGetTypeID(bv) == AXValueGetTypeID() else { return nil }
         var rect = CGRect.zero
         guard AXValueGetValue(bv as! AXValue, .cgRect, &rect),
               rect.width >= 0, rect.height >= 0 else {
@@ -135,7 +138,9 @@ final class PanelAnchorResolver {
         let posErr = AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue)
         let sizeErr = AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeValue)
         guard posErr == .success, sizeErr == .success,
-              let pv = positionValue, let sv = sizeValue else {
+              let pv = positionValue, let sv = sizeValue,
+              CFGetTypeID(pv) == AXValueGetTypeID(),
+              CFGetTypeID(sv) == AXValueGetTypeID() else {
             return nil
         }
         var origin = CGPoint.zero

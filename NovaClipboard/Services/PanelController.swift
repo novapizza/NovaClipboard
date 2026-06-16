@@ -106,7 +106,12 @@ final class PanelController {
         panel.contentView?.layer?.cornerRadius = 10
         panel.contentView?.layer?.masksToBounds = true
 
-        panel.onResignKey = { [weak self] in self?.hide() }
+        panel.onResignKey = { [weak self] in
+            // Skip hide while a modal sheet (e.g. confirmationDialog) owns focus,
+            // otherwise the dialog loses its parent and the UI breaks.
+            if NSApp.modalWindow != nil { return }
+            self?.hide()
+        }
         return panel
     }
 }

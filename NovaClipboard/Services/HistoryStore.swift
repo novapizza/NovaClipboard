@@ -81,18 +81,20 @@ final class HistoryStore {
 
     /// Dedup against the most-recent N items by checksum (Spec §3.2 / Plan Step 3.2).
     /// Re-copying an older item refreshes its `createdAt` rather than inserting a duplicate.
-    private static let dedupWindow = 50
+    /// Window grows with `limit` so the dedup window always covers the visible history.
+    private static let minDedupWindow = 50
+    private var dedupWindow: Int { max(HistoryStore.minDedupWindow, limit) }
 
     private func findRecentDuplicate(checksum: String) -> ClipboardItem? {
         var descriptor = FetchDescriptor<ClipboardItem>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        descriptor.fetchLimit = HistoryStore.dedupWindow
+        descriptor.fetchLimit = dedupWindow
         let recent = (try? context.fetch(descriptor)) ?? []
         return recent.first(where: { $0.checksum == checksum })
     }
 
-    private func evictOverflowIfNeeded() {
+    func evictOverflowIfNeeded() {
         let countDescriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate { !$0.isPinned }
         )
@@ -110,5 +112,6 @@ final class HistoryStore {
             ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
+        try? context.save()
     }
 }
