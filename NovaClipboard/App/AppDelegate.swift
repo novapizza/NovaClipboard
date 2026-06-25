@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var retentionTimer: Timer?
     private var cancellables: Set<AnyCancellable> = []
     private var permissionMonitorTimer: Timer?
+    private var accessibilityMenuItem: NSMenuItem?
     private let updateController = UpdateController.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -38,7 +39,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startRetentionSweep()
         startPermissionMonitor()
 
-        if !settings.hasOnboarded || !AXIsProcessTrusted() {
+        // Only auto-present the welcome window on the genuine first launch.
+        // If Accessibility is revoked or invalidated later (e.g. signature change after rebuild
+        // or auto-update), surface it via the menu-bar warning icon plus the conditional
+        // "Accessibility Permission…" menu item instead of popping a modal each launch.
+        if !settings.hasOnboarded {
             showOnboarding()
         }
     }
@@ -95,6 +100,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateItem.target = updateController
         menu.addItem(updateItem)
 
+        let permissionItem = NSMenuItem(
+            title: "Accessibility Permission…",
+            action: #selector(openAccessibilityPermission),
+            keyEquivalent: ""
+        )
+        permissionItem.target = self
+        permissionItem.isHidden = AXIsProcessTrusted()
+        menu.addItem(permissionItem)
+        accessibilityMenuItem = permissionItem
+
         menu.addItem(NSMenuItem.separator())
 
         let clearItem = NSMenuItem(title: "Clear All (keep pinned)", action: #selector(clearAll), keyEquivalent: "")
@@ -112,10 +127,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateStatusIcon(button: NSStatusBarButton) {
-        let symbolName = AXIsProcessTrusted() ? "doc.on.clipboard" : "exclamationmark.triangle"
+        let trusted = AXIsProcessTrusted()
+        let symbolName = trusted ? "doc.on.clipboard" : "exclamationmark.triangle"
         let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "NovaClipboard")
-        image?.isTemplate = AXIsProcessTrusted()
+        image?.isTemplate = trusted
         button.image = image
+        accessibilityMenuItem?.isHidden = trusted
     }
 
     private func setupPanelController() {
@@ -313,6 +330,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func clearAll() {
         historyStore?.clearAll(keepPinned: true)
+    }
+
+    @objc private func openAccessibilityPermission() {
+        showOnboarding()
     }
 
     @objc private func quit() {
