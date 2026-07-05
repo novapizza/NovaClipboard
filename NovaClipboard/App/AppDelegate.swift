@@ -251,6 +251,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] _ in self?.applyQuickPasteHotKeys() }
             .store(in: &cancellables)
 
+        settings.$quickPasteModifiers
+            .dropFirst()
+            .sink { [weak self] _ in self?.applyQuickPasteHotKeys() }
+            .store(in: &cancellables)
+
         settings.$captureScreenshots
             .dropFirst()
             .sink { [weak self] enabled in
@@ -274,8 +279,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hotKeyManager.unregisterQuickPaste()
             return
         }
-        let mods = UInt32(cmdKey | shiftKey)
-        hotKeyManager.registerQuickPaste(modifiers: mods) { [weak self] digit in
+        hotKeyManager.registerQuickPaste(modifiers: settings.quickPasteModifiers) { [weak self] digit in
             self?.quickPaste(index: digit - 1)
         }
     }

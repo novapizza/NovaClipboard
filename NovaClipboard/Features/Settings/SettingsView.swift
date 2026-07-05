@@ -54,8 +54,12 @@ private struct GeneralTab: View {
 
             HotKeyPicker(combo: $settings.hotKey)
 
-            Toggle("Quick paste with ⌘⇧1–9", isOn: $settings.quickPasteEnabled)
-                .help("Paste the Nth most recent item directly (⌘⇧1 = newest) without opening the panel.")
+            Toggle("Quick paste by number", isOn: $settings.quickPasteEnabled)
+                .help("Paste the Nth most recent item directly (slot 1 = newest) without opening the panel.")
+
+            if settings.quickPasteEnabled {
+                QuickPasteHotKeyPicker(modifiers: $settings.quickPasteModifiers)
+            }
 
             Picker("Panel position", selection: $settings.panelPosition) {
                 Text("At caret").tag(PanelPositionPreference.atCaret)
@@ -248,6 +252,33 @@ private struct HotKeyPicker: View {
             .buttonStyle(.liquidGlass(tint: capturing ? .accentColor : nil))
             .background(HotKeyCapture(active: capturing) { newCombo in
                 combo = newCombo
+                capturing = false
+            })
+        }
+    }
+}
+
+private struct QuickPasteHotKeyPicker: View {
+    @Binding var modifiers: UInt32
+    @State private var capturing: Bool = false
+
+    var body: some View {
+        HStack {
+            Text("Quick paste hotkey")
+            Spacer()
+            Button {
+                capturing.toggle()
+            } label: {
+                Text(capturing ? "Press combo…" : "\(KeyCombo.modifierSymbols(modifiers))1–9")
+                    .font(.callout.monospaced())
+                    .frame(minWidth: 100)
+            }
+            .buttonStyle(.liquidGlass(tint: capturing ? .accentColor : nil))
+            .help("Press a combo like ⌥⌘ + any key. Only its modifiers are used; the digits 1–9 pick the item.")
+            // Reuse the panel hotkey capture and keep only the modifier mask —
+            // the digit is fixed to the slot number.
+            .background(HotKeyCapture(active: capturing) { newCombo in
+                modifiers = newCombo.modifiers
                 capturing = false
             })
         }
