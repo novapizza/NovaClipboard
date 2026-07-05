@@ -25,12 +25,16 @@ struct KeyCombo: Equatable, Codable {
     }
 
     var displayString: String {
+        KeyCombo.modifierSymbols(modifiers) + KeyCombo.keyName(for: keyCode)
+    }
+
+    /// Symbol prefix for a Carbon modifier mask (e.g. `⌥⌘`). Empty if no modifiers.
+    static func modifierSymbols(_ modifiers: UInt32) -> String {
         var parts: [String] = []
         if modifiers & UInt32(controlKey) != 0 { parts.append("⌃") }
         if modifiers & UInt32(optionKey) != 0 { parts.append("⌥") }
         if modifiers & UInt32(shiftKey) != 0 { parts.append("⇧") }
         if modifiers & UInt32(cmdKey) != 0 { parts.append("⌘") }
-        parts.append(KeyCombo.keyName(for: keyCode))
         return parts.joined()
     }
 

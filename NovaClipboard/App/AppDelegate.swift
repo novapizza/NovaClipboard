@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import Combine
 import SwiftData
 import SwiftUI
@@ -35,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupScreenshotWatcher()
         setupSettingsBindings()
         applyHotKey()
+        applyQuickPasteHotKeys()
         applyHistoryLimit()
         startRetentionSweep()
         startPermissionMonitor()
@@ -244,6 +246,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .sink { [weak self] _ in self?.runRetentionSweep() }
             .store(in: &cancellables)
 
+        settings.$quickPasteEnabled
+            .dropFirst()
+            .sink { [weak self] _ in self?.applyQuickPasteHotKeys() }
+            .store(in: &cancellables)
+
+        settings.$quickPasteModifiers
+            .dropFirst()
+            .sink { [weak self] _ in self?.applyQuickPasteHotKeys() }
+            .store(in: &cancellables)
+
         settings.$captureScreenshots
             .dropFirst()
             .sink { [weak self] enabled in
@@ -260,6 +272,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeyManager.register(keyCombo: settings.hotKey) { [weak self] in
             self?.panelController?.toggle()
         }
+    }
+
+    private func applyQuickPasteHotKeys() {
+        guard settings.quickPasteEnabled else {
+            hotKeyManager.unregisterQuickPaste()
+            return
+        }
+        hotKeyManager.registerQuickPaste(modifiers: settings.quickPasteModifiers) { [weak self] digit in
+            self?.quickPaste(index: digit - 1)
+        }
+    }
+
+    /// Paste the Nth most-recent history item directly, without opening the panel.
+    /// `index` is 0-based (⌘⇧1 → index 0).
+    private func quickPaste(index: Int) {
+        guard let store = historyStore else { return }
+        // The panel is normally closed when quick-pasting, so the focused app is the target.
+        // If it happens to be open, use the app captured before it stole focus and hide it.
+        let target: NSRunningApplication?
+        if panelController?.isVisible == true {
+            target = panelController?.frontmostAppBeforeShow
+            panelController?.hide()
+        } else {
+            target = NSWorkspace.shared.frontmostApplication
+        }
+        let items = store.fetchAll(limit: index + 1)
+        guard items.indices.contains(index) else { return }
+        appLogger.info("quickPaste index=\(index, privacy: .public)")
+        pasteEngine.paste(item: items[index], toApp: target)
     }
 
     private func applyHistoryLimit() {

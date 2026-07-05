@@ -116,6 +116,15 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(hasOnboarded, forKey: Key.hasOnboarded.rawValue) }
     }
 
+    @Published var quickPasteEnabled: Bool {
+        didSet { defaults.set(quickPasteEnabled, forKey: Key.quickPasteEnabled.rawValue) }
+    }
+
+    /// Carbon modifier mask prefixed to digits 1–9 for quick-paste (default ⌘⇧).
+    @Published var quickPasteModifiers: UInt32 {
+        didSet { defaults.set(Int(quickPasteModifiers), forKey: Key.quickPasteModifiers.rawValue) }
+    }
+
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
@@ -144,6 +153,9 @@ final class AppSettings: ObservableObject {
             defaults.set(AppSettings.defaultBlocklistBundleIDs, forKey: Key.blocklistBundleIDs.rawValue)
         }
         self.hasOnboarded = defaults.bool(forKey: Key.hasOnboarded.rawValue)
+        self.quickPasteEnabled = (defaults.object(forKey: Key.quickPasteEnabled.rawValue) as? Bool) ?? true
+        self.quickPasteModifiers = (defaults.object(forKey: Key.quickPasteModifiers.rawValue) as? Int)
+            .map(UInt32.init) ?? UInt32(cmdKey | shiftKey)
 
         // First launch: persist default-true and register the login item so
         // the OS-level state matches the UI (didSet doesn't fire during init).
@@ -181,5 +193,7 @@ final class AppSettings: ObservableObject {
         case disableScreenshotPreview
         case blocklistBundleIDs
         case hasOnboarded
+        case quickPasteEnabled
+        case quickPasteModifiers
     }
 }
