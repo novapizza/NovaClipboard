@@ -54,6 +54,9 @@ private struct GeneralTab: View {
 
             HotKeyPicker(combo: $settings.hotKey)
 
+            Toggle("Quick paste with ⌘⇧1–9", isOn: $settings.quickPasteEnabled)
+                .help("Paste the Nth most recent item directly (⌘⇧1 = newest) without opening the panel.")
+
             Picker("Panel position", selection: $settings.panelPosition) {
                 Text("At caret").tag(PanelPositionPreference.atCaret)
                 Text("At mouse").tag(PanelPositionPreference.atMouse)
