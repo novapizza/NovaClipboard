@@ -136,11 +136,6 @@ final class PasteEngine {
 /// rewritten verbatim later. Used by `PasteEngine` to restore the user's
 /// pre-existing clipboard contents after simulating Cmd+V.
 struct PasteboardSnapshot {
-    /// Skip restoring any single representation larger than this to avoid holding a multi-megabyte
-    /// copy of e.g. a 50MB image in RAM for the 500ms paste window. The user keeps text/URLs
-    /// (the usual "I'm in the middle of pasting something" use case); huge media may be lost.
-    static let maxBytesPerType = 4 * 1_024 * 1_024
-
     private struct Entry {
         let types: [NSPasteboard.PasteboardType]
         let data: [NSPasteboard.PasteboardType: Data]
@@ -152,7 +147,7 @@ struct PasteboardSnapshot {
         self.entries = items.map { item in
             var data: [NSPasteboard.PasteboardType: Data] = [:]
             for t in item.types {
-                if let d = item.data(forType: t), d.count <= PasteboardSnapshot.maxBytesPerType {
+                if let d = item.data(forType: t) {
                     data[t] = d
                 }
             }

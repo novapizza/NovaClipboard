@@ -87,9 +87,12 @@ final class AppSettings: ObservableObject {
         didSet {
             defaults.set(captureScreenshots, forKey: Key.captureScreenshots.rawValue)
             // OS-level screenshot preview override is owned by NovaClipboard only while
-            // capture is enabled. Release it when capture is off so the user isn't left
-            // with a hidden system tweak after disabling the feature.
-            ScreenshotPreviewPreference.setDisabled(captureScreenshots && disableScreenshotPreview)
+            // both capture and our preview toggle are enabled. Release it when capture is
+            // turned off, but never touch the key when the toggle is off — the user may
+            // have set `com.apple.screencapture show-thumbnail` themselves.
+            if disableScreenshotPreview {
+                ScreenshotPreviewPreference.setDisabled(captureScreenshots)
+            }
         }
     }
 

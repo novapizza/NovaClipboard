@@ -287,18 +287,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startPermissionMonitor() {
-        // Stop polling once Accessibility is granted — revocation is rare and the user is
-        // already inside System Settings if they do it; we can rely on the next app launch
-        // to repaint the warning icon.
-        guard !AXIsProcessTrusted() else { return }
+        // Poll in both directions: the grant can disappear mid-session (revoked in System
+        // Settings, or invalidated by a signature change after rebuild/auto-update), and the
+        // warning icon + "Accessibility Permission…" menu item are the only surfaces for it
+        // now that onboarding no longer re-prompts after first launch.
         let timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let button = self.statusItem?.button else { return }
                 self.updateStatusIcon(button: button)
-                if AXIsProcessTrusted() {
-                    self.permissionMonitorTimer?.invalidate()
-                    self.permissionMonitorTimer = nil
-                }
             }
         }
         permissionMonitorTimer = timer

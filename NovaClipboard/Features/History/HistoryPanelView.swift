@@ -7,7 +7,6 @@ struct HistoryPanelView: View {
     /// database; the panel just never renders more than this many recents at once.
     private static let recentFetchLimit = 200
 
-    @Environment(\.modelContext) private var modelContext
     @Query private var pinnedItems: [ClipboardItem]
     @Query private var recentItems: [ClipboardItem]
 

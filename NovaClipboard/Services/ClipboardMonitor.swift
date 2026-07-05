@@ -73,8 +73,8 @@ final class ClipboardMonitor {
             onNewItem?(fileItem)
             return
         }
-        if let imageData = readImageData() {
-            processImageAsync(data: imageData, bundleID: bundleID)
+        if let image = readImageData() {
+            processImageAsync(image: image, bundleID: bundleID)
             return
         }
         if let textItem = readText(bundleID: bundleID) {
@@ -104,42 +104,54 @@ final class ClipboardMonitor {
         return ClipboardItem.file(urls: urls, sourceBundleID: bundleID)
     }
 
-    /// Reads PNG/TIFF bytes off the pasteboard but defers hashing and disk writes — those run
-    /// in `processImageAsync` so the polling loop and main thread stay responsive on big copies.
-    private func readImageData() -> Data? {
+    /// Raw bytes read off the pasteboard. TIFF is converted to PNG later on the
+    /// processing queue so the multi-MB re-encode doesn't block the 300ms poll.
+    private struct PasteboardImage {
+        let data: Data
+        let isTIFF: Bool
+    }
+
+    /// Reads PNG/TIFF bytes off the pasteboard but defers conversion, hashing, and disk
+    /// writes — those run in `processImageAsync` so the polling loop and main thread stay
+    /// responsive on big copies.
+    private func readImageData() -> PasteboardImage? {
         let pngType = NSPasteboard.PasteboardType("public.png")
         let tiffType = NSPasteboard.PasteboardType("public.tiff")
 
         if let png = pasteboard.data(forType: pngType) {
-            return png
+            return PasteboardImage(data: png, isTIFF: false)
         }
-        if let tiff = pasteboard.data(forType: tiffType),
-           let rep = NSBitmapImageRep(data: tiff) {
-            return rep.representation(using: .png, properties: [:])
+        if let tiff = pasteboard.data(forType: tiffType) {
+            return PasteboardImage(data: tiff, isTIFF: true)
         }
         return nil
     }
 
-    private func processImageAsync(data: Data, bundleID: String?) {
+    private func processImageAsync(image: PasteboardImage, bundleID: String?) {
+        // Stamp the copy time now: text/file items are delivered synchronously from poll(),
+        // so an item created after the async hop would sort below content copied later.
+        let copiedAt = Date()
         processingQueue.async { [weak self] in
+            // Normalize to PNG before hashing so dedup matches PNG copies of the same image.
+            let data: Data
+            if image.isTIFF {
+                guard let rep = NSBitmapImageRep(data: image.data),
+                      let png = rep.representation(using: .png, properties: [:]) else { return }
+                data = png
+            } else {
+                data = image.data
+            }
+
             let id = UUID()
             let inline = data.count < ImageStore.inlineLimitBytes
             let path = inline ? nil : ImageStore.write(data: data, id: id)
-            let checksum = Checksum.sha256(data)
-
-            let sizeKB = Double(data.count) / 1024.0
-            let preview = sizeKB < 1024
-                ? String(format: "Image · %.0f KB", sizeKB)
-                : String(format: "Image · %.1f MB", sizeKB / 1024.0)
-
-            let item = ClipboardItem(
+            let item = ClipboardItem.image(
+                data: data,
+                inline: inline,
                 id: id,
-                type: .image,
-                preview: preview,
-                imageBlob: inline ? data : nil,
+                createdAt: copiedAt,
                 imagePath: path,
-                sourceBundleID: bundleID,
-                checksum: checksum
+                sourceBundleID: bundleID
             )
             DispatchQueue.main.async {
                 self?.onNewItem?(item)

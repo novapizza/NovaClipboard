@@ -112,9 +112,10 @@ final class PanelController {
         panel.contentView?.layer?.masksToBounds = true
 
         panel.onResignKey = { [weak self] in
-            // Skip hide while a modal sheet (e.g. confirmationDialog) owns focus,
-            // otherwise the dialog loses its parent and the UI breaks.
-            if NSApp.modalWindow != nil { return }
+            // Skip hide while a dialog owns focus, otherwise the dialog loses its
+            // parent and the UI breaks. confirmationDialog is a window-attached sheet
+            // (never sets NSApp.modalWindow), so check attachedSheet as well.
+            if NSApp.modalWindow != nil || self?.panel?.attachedSheet != nil { return }
             self?.hide()
         }
         return panel

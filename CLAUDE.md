@@ -55,9 +55,9 @@ Two independent producers feed `HistoryStore.insert(_:)`:
 
 ### Storage & dedup
 
-`ClipboardItem` (`@Model`, `Models/ClipboardItem.swift`) is the only SwiftData entity. Image bytes follow a two-tier scheme: blobs < `ImageStore.inlineLimitBytes` (1 MB) are stored inline via `@Attribute(.externalStorage) imageBlob`; larger ones spill to `imagePath` files written by `ImageStore`. **Both paths must stay in sync** — when an item is deleted, evicted, or dedup'd, call `ImageStore.deleteFile(at: item.imagePath)` and `ImageThumbnailCache.shared.invalidate(id:)`. `HistoryStore` does this in `delete`, `clearAll`, `evictOverflowIfNeeded`, and the dedup branch of `insert`.
+`ClipboardItem` (`@Model`, `Models/ClipboardItem.swift`) is the only SwiftData entity. Image bytes follow a two-tier scheme: blobs < `ImageStore.inlineLimitBytes` (128 KB) are stored inline via `@Attribute(.externalStorage) imageBlob`; larger ones spill to `imagePath` files written by `ImageStore`. **Both paths must stay in sync** — when an item is deleted, evicted, or dedup'd, call `ImageStore.deleteFile(at: item.imagePath)` and `ImageThumbnailCache.shared.invalidate(id:)`. `HistoryStore` does this in `delete`, `clearAll`, `evictOverflowIfNeeded`, and the dedup branch of `insert`.
 
-Dedup is by SHA-256 over the content (text string, file-URL list joined by `\n`, or raw image bytes — see `Checksum.sha256` callers). The window is `HistoryStore.dedupWindow = 50` most-recent items; matches refresh `createdAt` instead of inserting a row. Pinned items are exempt from history-limit eviction (`evictOverflowIfNeeded` filters `!isPinned`) and from `clearAll(keepPinned: true)` and retention sweeps.
+Dedup is by SHA-256 over the content (text string, file-URL list joined by `\n`, or raw image bytes — see `Checksum.sha256` callers). The window is `HistoryStore.dedupWindow` — `max(50, limit)` most-recent items, so dedup covers the whole retained history; matches refresh `createdAt` instead of inserting a row. Pinned items are exempt from history-limit eviction (`evictOverflowIfNeeded` filters `!isPinned`) and from `clearAll(keepPinned: true)` and retention sweeps.
 
 ### Paste flow
 
@@ -78,7 +78,7 @@ The restore is what lets users keep their in-progress copy. If you change the ti
 
 ### Permissions
 
-Accessibility is required for both ⌘V synthesis and caret detection. `AppDelegate.startPermissionMonitor` polls `AXIsProcessTrusted()` every 3 s and swaps the status-item SF Symbol (`doc.on.clipboard` ↔ `exclamationmark.triangle`). The onboarding window is shown if `!settings.hasOnboarded || !AXIsProcessTrusted()`.
+Accessibility is required for both ⌘V synthesis and caret detection. `AppDelegate.startPermissionMonitor` polls `AXIsProcessTrusted()` every 3 s and swaps the status-item SF Symbol (`doc.on.clipboard` ↔ `exclamationmark.triangle`). The onboarding window auto-shows only on the genuine first launch (`!settings.hasOnboarded`); a later revocation is surfaced by the warning icon and the conditional "Accessibility Permission…" menu item.
 
 Launch-at-login uses `SMAppService` via `Utilities/LaunchAtLogin.swift`; on first run the OS-level state is synced to match the in-app toggle so the UI cannot lie.
 

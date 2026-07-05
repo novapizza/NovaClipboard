@@ -37,28 +37,16 @@ final class PanelAnchorResolver {
 
     private static let jetbrainsPrefix = "com.jetbrains."
 
-    /// UserDefaults key for the runtime-learned broken-bundle list. Only learned IDs are
-    /// persisted (the static defaults are merged back in on launch).
-    private static let learnedBrokenBundlesKey = "PanelAnchorResolver.learnedBrokenBundles"
-
-    /// Hard cap on persisted learned IDs so a long-running install can't grow this list forever.
-    private static let maxLearnedBrokenBundles = 50
-
     private let systemWide: AXUIElement
-    private let defaults: UserDefaults
     private var brokenBundleIDs: Set<String>
-    private var learnedBrokenBundles: [String]
 
     var fixedOrigin: CGPoint = .zero
 
-    init(defaults: UserDefaults = .standard) {
+    init() {
         let element = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(element, PanelAnchorResolver.axMessagingTimeout)
         self.systemWide = element
-        self.defaults = defaults
-        let persisted = defaults.stringArray(forKey: PanelAnchorResolver.learnedBrokenBundlesKey) ?? []
-        self.learnedBrokenBundles = persisted
-        self.brokenBundleIDs = PanelAnchorResolver.defaultBrokenBundleIDs.union(persisted)
+        self.brokenBundleIDs = PanelAnchorResolver.defaultBrokenBundleIDs
     }
 
     func resolve(preference: PanelPositionPreference = .atCaret) -> PanelAnchor {
@@ -95,17 +83,11 @@ final class PanelAnchorResolver {
         return .mouse(NSEvent.mouseLocation)
     }
 
+    // Session-only: a nil focused element or an AX timeout can be transient (app busy,
+    // no text focus at hotkey time), so learned IDs must not outlive the process — a
+    // persisted false positive would disable caret anchoring for that app forever.
     private func learnBroken(_ bundleID: String) {
-        guard !brokenBundleIDs.contains(bundleID) else { return }
         brokenBundleIDs.insert(bundleID)
-        // Static defaults already cover the well-known bad actors — only persist genuinely new
-        // IDs and trim if a misbehaving install would otherwise push the list past the cap.
-        guard !PanelAnchorResolver.defaultBrokenBundleIDs.contains(bundleID) else { return }
-        learnedBrokenBundles.append(bundleID)
-        if learnedBrokenBundles.count > PanelAnchorResolver.maxLearnedBrokenBundles {
-            learnedBrokenBundles.removeFirst(learnedBrokenBundles.count - PanelAnchorResolver.maxLearnedBrokenBundles)
-        }
-        defaults.set(learnedBrokenBundles, forKey: PanelAnchorResolver.learnedBrokenBundlesKey)
     }
 
     private func isBroken(_ bundleID: String) -> Bool {

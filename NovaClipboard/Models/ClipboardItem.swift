@@ -92,6 +92,8 @@ extension ClipboardItem {
     static func image(
         data: Data,
         inline: Bool,
+        id: UUID = UUID(),
+        createdAt: Date = Date(),
         imagePath: String? = nil,
         sourceBundleID: String? = nil
     ) -> ClipboardItem {
@@ -100,6 +102,8 @@ extension ClipboardItem {
             ? String(format: "Image · %.0f KB", sizeKB)
             : String(format: "Image · %.1f MB", sizeKB / 1024.0)
         return ClipboardItem(
+            id: id,
+            createdAt: createdAt,
             type: .image,
             preview: preview,
             imageBlob: inline ? data : nil,
