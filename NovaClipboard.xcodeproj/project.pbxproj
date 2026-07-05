@@ -14,6 +14,7 @@
 		31FC2D2B4DE119AC961BF230 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED5253D88A161094198F006 /* LiquidGlass.swift */; };
 		3DF70F161111D0B812011356 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CDFB7B8DBDAC366B35D44B /* AppDelegate.swift */; };
 		4DEC66CB9658B1E5DFB8AD2B /* PanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFF0194B8B583443AF9DE740 /* PanelController.swift */; };
+		53A95816D080340E0AD1682D /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 6E8D7E400B7A87484141A060 /* Sparkle */; };
 		58E2F4282B67437B349A840C /* KeyCombo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1138540629F3296E37191 /* KeyCombo.swift */; };
 		5E5300685781376CF1201021 /* HistoryItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */; };
 		654A93111DD1CBD097094D5D /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894927E657A5FDDB08FA977D /* ClipboardItem.swift */; };
@@ -34,6 +35,7 @@
 		DF8A9F366CFA575C61FDC20D /* ClipboardMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C75E2455BB1F86E371574F48 /* ClipboardMonitorTests.swift */; };
 		EBD1149D299ADF7F48358626 /* PasteboardSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CFB3599DB4BE8516413427 /* PasteboardSnapshotTests.swift */; };
 		EC227B2F00F0B304BAEFAA14 /* Checksum.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2839AAA4769A6D20370FAE5 /* Checksum.swift */; };
+		F08DCEA8E547C9925D0BBBE2 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955735144218A9D2E6DCC3E9 /* UpdateController.swift */; };
 		FD0B2B22F9390C7851AFC264 /* HistoryPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E983524F663810FD4E66441 /* HistoryPanelView.swift */; };
 /* End PBXBuildFile section */
 
@@ -60,6 +62,7 @@
 		894927E657A5FDDB08FA977D /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		8E983524F663810FD4E66441 /* HistoryPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPanelView.swift; sourceTree = "<group>"; };
 		905BB92C1BB6730E852D92C3 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
+		955735144218A9D2E6DCC3E9 /* UpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateController.swift; sourceTree = "<group>"; };
 		966F4876CA9F2BCE21EFA23D /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		995E042E52580CF288E1D553 /* HistoryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryStoreTests.swift; sourceTree = "<group>"; };
 		9AD8F6638AD67BC883E1216A /* ChecksumTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecksumTests.swift; sourceTree = "<group>"; };
@@ -80,6 +83,17 @@
 		DFF0194B8B583443AF9DE740 /* PanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelController.swift; sourceTree = "<group>"; };
 		F241ED3463525A2120CD596E /* NovaClipboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NovaClipboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7762C5F8A06CDE64B8756FB3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				53A95816D080340E0AD1682D /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0717AFD05F9AEC2C5905455F /* Features */ = {
@@ -209,6 +223,7 @@
 				DFF0194B8B583443AF9DE740 /* PanelController.swift */,
 				1D846BACDA5C11B67B740EF1 /* PasteEngine.swift */,
 				D6C54C49AFC963D680B03827 /* ScreenshotWatcher.swift */,
+				955735144218A9D2E6DCC3E9 /* UpdateController.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -232,6 +247,7 @@
 			buildPhases = (
 				69D0CBA8259CD9A0536CEB1F /* Sources */,
 				22EC7EE45C9758E1C2BCA9D4 /* Resources */,
+				7762C5F8A06CDE64B8756FB3 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -239,6 +255,7 @@
 			);
 			name = NovaClipboard;
 			packageProductDependencies = (
+				6E8D7E400B7A87484141A060 /* Sparkle */,
 			);
 			productName = NovaClipboard;
 			productReference = 9B45EAEDC4F65268F9C0891E /* NovaClipboard.app */;
@@ -288,6 +305,9 @@
 			);
 			mainGroup = AA3B1BD866BD93929842A5A0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				68BA6C2F670D447D32180113 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BE91AB9115A888D8EB2B1F10 /* Products */;
 			projectDirPath = "";
@@ -337,6 +357,7 @@
 				84C49450E0606B77CDAA27D0 /* ScreenshotPreviewPreference.swift in Sources */,
 				C0CEF23EB1ECF758E8E22072 /* ScreenshotWatcher.swift in Sources */,
 				959BF62D8F748012C165895A /* SettingsView.swift in Sources */,
+				F08DCEA8E547C9925D0BBBE2 /* UpdateController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -455,7 +476,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 0;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -475,7 +496,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = "0.0.0-dev";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -523,7 +544,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 0;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -537,7 +558,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = "0.0.0-dev";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -597,6 +618,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		68BA6C2F670D447D32180113 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6E8D7E400B7A87484141A060 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 68BA6C2F670D447D32180113 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3FA987360BFF329A0531DF10 /* Project object */;
 }

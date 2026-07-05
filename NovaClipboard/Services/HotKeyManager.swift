@@ -1,5 +1,8 @@
 import AppKit
 import Carbon.HIToolbox
+import os
+
+private let hotKeyLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "HotKeyManager")
 
 final class HotKeyManager {
     private static let signature: FourCharCode = {
@@ -14,21 +17,22 @@ final class HotKeyManager {
     private var eventHandler: EventHandlerRef?
     private var handler: (() -> Void)?
 
-    private static var shared: HotKeyManager?
-
-    func register(keyCombo: KeyCombo, handler: @escaping () -> Void) {
+    @discardableResult
+    func register(keyCombo: KeyCombo, handler: @escaping () -> Void) -> Bool {
         unregister()
         self.handler = handler
-        HotKeyManager.shared = self
 
         var eventType = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
         )
-        InstallEventHandler(
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        let installStatus = InstallEventHandler(
             GetApplicationEventTarget(),
-            { _, eventRef, _ in
-                guard let eventRef else { return noErr }
+            { _, eventRef, userData in
+                guard let eventRef, let userData else {
+                    return OSStatus(eventNotHandledErr)
+                }
                 var hkID = EventHotKeyID()
                 let status = GetEventParameter(
                     eventRef,
@@ -40,16 +44,24 @@ final class HotKeyManager {
                     &hkID
                 )
                 guard status == noErr, hkID.signature == HotKeyManager.signature else {
-                    return noErr
+                    return OSStatus(eventNotHandledErr)
                 }
-                HotKeyManager.shared?.handler?()
+                let manager = Unmanaged<HotKeyManager>.fromOpaque(userData).takeUnretainedValue()
+                manager.handler?()
                 return noErr
             },
             1,
             &eventType,
-            nil,
+            selfPtr,
             &eventHandler
         )
+
+        guard installStatus == noErr else {
+            hotKeyLogger.error("InstallEventHandler failed with status \(installStatus, privacy: .public)")
+            eventHandler = nil
+            self.handler = nil
+            return false
+        }
 
         let hkID = EventHotKeyID(signature: HotKeyManager.signature, id: 1)
         var ref: EventHotKeyRef?
@@ -63,8 +75,15 @@ final class HotKeyManager {
         )
         if status == noErr {
             hotKeyRef = ref
+            return true
         } else {
-            NSLog("HotKeyManager: RegisterEventHotKey failed with status \(status)")
+            hotKeyLogger.error("RegisterEventHotKey failed with status \(status, privacy: .public)")
+            if let handler = eventHandler {
+                RemoveEventHandler(handler)
+                eventHandler = nil
+            }
+            self.handler = nil
+            return false
         }
     }
 
@@ -78,9 +97,6 @@ final class HotKeyManager {
             eventHandler = nil
         }
         self.handler = nil
-        if HotKeyManager.shared === self {
-            HotKeyManager.shared = nil
-        }
     }
 
     deinit {

@@ -130,15 +130,7 @@ struct HistoryItemRow: View {
     private var leadingVisual: some View {
         switch item.type {
         case .image:
-            if let thumb = ImageThumbnailCache.shared.thumbnail(for: item) {
-                Image(nsImage: thumb)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 36, height: 36)
-                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-            } else {
-                fallbackIcon
-            }
+            ThumbnailView(item: item, fallback: fallbackIcon)
         case .file:
             if let firstURL = item.fileURLs?.first,
                let url = URL(string: firstURL) {
@@ -169,6 +161,37 @@ struct HistoryItemRow: View {
         case .link: return "link"
         case .image: return "photo"
         case .file: return "doc"
+        }
+    }
+}
+
+/// Async-loading thumbnail that avoids blocking the main thread during scroll on cache miss.
+private struct ThumbnailView<Fallback: View>: View {
+    let item: ClipboardItem
+    let fallback: Fallback
+    @State private var thumb: NSImage?
+
+    var body: some View {
+        Group {
+            if let thumb {
+                Image(nsImage: thumb)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            } else {
+                fallback
+            }
+        }
+        .task(id: item.id) {
+            if let cached = ImageThumbnailCache.shared.cached(for: item) {
+                thumb = cached
+                return
+            }
+            let loaded = await ImageThumbnailCache.shared.loadThumbnail(for: item)
+            if !Task.isCancelled {
+                thumb = loaded
+            }
         }
     }
 }

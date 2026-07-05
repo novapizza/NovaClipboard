@@ -9,6 +9,12 @@ private let screenshotLogger = Logger(subsystem: "io.haunc.NovaClipboard", categ
 /// and reports new screenshot files. Clipboard-only screenshots (⌃⌘⇧3/4) are already
 /// covered by `ClipboardMonitor`.
 final class ScreenshotWatcher {
+    /// Soft cap on the dedup set. The watcher rarely stops on long-lived menu-bar sessions, so
+    /// without a cap this set would grow forever. When we hit the cap we drop the entire set —
+    /// the only consequence is that re-detecting an *existing* screenshot file becomes
+    /// possible again, which is vanishingly unlikely (FSEvents fires per-create, not per-poll).
+    private static let maxSeenPaths = 1000
+
     private var stream: FSEventStreamRef?
     private var watchedPath: String?
     private var startTime: Date = .distantFuture
@@ -43,7 +49,9 @@ final class ScreenshotWatcher {
         let callback: FSEventStreamCallback = { _, info, numEvents, eventPaths, eventFlags, _ in
             guard let info else { return }
             let watcher = Unmanaged<ScreenshotWatcher>.fromOpaque(info).takeUnretainedValue()
-            let cfPaths = unsafeBitCast(eventPaths, to: CFArray.self)
+            // `kFSEventStreamCreateFlagUseCFTypes` makes `eventPaths` a CFArrayRef; bridge it
+            // safely through Unmanaged instead of `unsafeBitCast`.
+            let cfPaths = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue()
             let paths = (cfPaths as NSArray).compactMap { $0 as? String }
             for i in 0..<numEvents where i < paths.count {
                 let flagsVal = eventFlags[i]
@@ -96,14 +104,21 @@ final class ScreenshotWatcher {
 
         if let created = (try? FileManager.default.attributesOfItem(atPath: path))?[.creationDate] as? Date,
            created < startTime.addingTimeInterval(-2) {
-            seenPaths.insert(path)
+            recordSeen(path)
             return
         }
 
         guard isScreenshot(path: path) else { return }
-        seenPaths.insert(path)
+        recordSeen(path)
         screenshotLogger.info("Detected screenshot: \(path, privacy: .public)")
         deliverWhenReadable(url: URL(fileURLWithPath: path), attempt: 0)
+    }
+
+    private func recordSeen(_ path: String) {
+        if seenPaths.count >= ScreenshotWatcher.maxSeenPaths {
+            seenPaths.removeAll(keepingCapacity: true)
+        }
+        seenPaths.insert(path)
     }
 
     private func isScreenshot(path: String) -> Bool {

@@ -7,44 +7,34 @@ private let prefLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "
 /// the file write to Desktop by ~5s). When disabled, `screencapture` writes the file
 /// to disk immediately so our `ScreenshotWatcher` can pick it up.
 ///
-/// Sets the `show-thumbnail` key under `com.apple.screencapture` and reloads
-/// SystemUIServer so the screenshot daemon re-reads its preferences.
+/// Writes the `show-thumbnail` key under `com.apple.screencapture`. The new value
+/// is picked up by the screencapture process on its next launch (each ⌘⇧3/4/5
+/// invocation spawns a fresh process), so a daemon restart isn't required.
 enum ScreenshotPreviewPreference {
     static let domain = "com.apple.screencapture"
     static let key = "show-thumbnail"
 
     /// `true` when the thumbnail has been explicitly disabled. macOS default (key unset) is "shown".
     static func isThumbnailDisabled() -> Bool {
-        guard let defaults = UserDefaults(suiteName: domain) else { return false }
-        guard defaults.object(forKey: key) != nil else { return false }
-        return defaults.bool(forKey: key) == false
+        let appID = domain as CFString
+        guard let value = CFPreferencesCopyAppValue(key as CFString, appID) else { return false }
+        if let boolRef = value as? Bool {
+            return boolRef == false
+        }
+        return false
     }
 
     static func setDisabled(_ disabled: Bool) {
-        guard let defaults = UserDefaults(suiteName: domain) else {
-            prefLogger.error("Could not open com.apple.screencapture defaults")
-            return
-        }
+        let appID = domain as CFString
+        let keyRef = key as CFString
         if disabled {
-            defaults.set(false, forKey: key)
+            CFPreferencesSetAppValue(keyRef, kCFBooleanFalse, appID)
         } else {
             // Remove our override so macOS reverts to its built-in default (thumbnail shown).
-            defaults.removeObject(forKey: key)
+            CFPreferencesSetAppValue(keyRef, nil, appID)
         }
-        defaults.synchronize()
-        reloadScreenshotDaemon()
-    }
-
-    /// SystemUIServer hosts the screencapture preview agent. Killing it lets launchd
-    /// respawn it with the fresh preference value.
-    private static func reloadScreenshotDaemon() {
-        let task = Process()
-        task.launchPath = "/usr/bin/killall"
-        task.arguments = ["SystemUIServer"]
-        do {
-            try task.run()
-        } catch {
-            prefLogger.error("Failed to reload SystemUIServer: \(error.localizedDescription, privacy: .public)")
+        if !CFPreferencesAppSynchronize(appID) {
+            prefLogger.error("Failed to synchronize com.apple.screencapture preferences")
         }
     }
 }

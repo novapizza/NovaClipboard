@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var retentionTimer: Timer?
     private var cancellables: Set<AnyCancellable> = []
     private var permissionMonitorTimer: Timer?
+    private var accessibilityMenuItem: NSMenuItem?
     private let updateController = UpdateController.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -37,9 +38,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyHistoryLimit()
         startRetentionSweep()
         startPermissionMonitor()
-        _ = updateController
 
-        if !settings.hasOnboarded || !AXIsProcessTrusted() {
+        // Only auto-present the welcome window on the genuine first launch.
+        // If Accessibility is revoked or invalidated later (e.g. signature change after rebuild
+        // or auto-update), surface it via the menu-bar warning icon plus the conditional
+        // "Accessibility Permission…" menu item instead of popping a modal each launch.
+        if !settings.hasOnboarded {
             showOnboarding()
         }
     }
@@ -62,7 +66,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             modelContainer = container
             historyStore = HistoryStore(context: container.mainContext, limit: settings.maxItems)
         } catch {
-            NSLog("Failed to create ModelContainer: \(error)")
+            appLogger.error("Failed to create ModelContainer: \(error.localizedDescription, privacy: .public)")
+            let alert = NSAlert()
+            alert.alertStyle = .critical
+            alert.messageText = "NovaClipboard cannot start"
+            alert.informativeText = "The clipboard database could not be opened.\n\n\(error.localizedDescription)\n\nThe app will now quit."
+            alert.addButton(withTitle: "Quit")
+            alert.runModal()
+            NSApp.terminate(nil)
         }
     }
 
@@ -89,6 +100,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateItem.target = updateController
         menu.addItem(updateItem)
 
+        let permissionItem = NSMenuItem(
+            title: "Accessibility Permission…",
+            action: #selector(openAccessibilityPermission),
+            keyEquivalent: ""
+        )
+        permissionItem.target = self
+        permissionItem.isHidden = AXIsProcessTrusted()
+        menu.addItem(permissionItem)
+        accessibilityMenuItem = permissionItem
+
         menu.addItem(NSMenuItem.separator())
 
         let clearItem = NSMenuItem(title: "Clear All (keep pinned)", action: #selector(clearAll), keyEquivalent: "")
@@ -106,16 +127,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateStatusIcon(button: NSStatusBarButton) {
-        let symbolName = AXIsProcessTrusted() ? "doc.on.clipboard" : "exclamationmark.triangle"
+        let trusted = AXIsProcessTrusted()
+        let symbolName = trusted ? "doc.on.clipboard" : "exclamationmark.triangle"
         let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "NovaClipboard")
-        image?.isTemplate = AXIsProcessTrusted()
+        image?.isTemplate = trusted
         button.image = image
+        accessibilityMenuItem?.isHidden = trusted
     }
 
     private func setupPanelController() {
-        guard let modelContainer else { return }
+        guard let modelContainer, let historyStore else { return }
         panelController = PanelController(
             modelContainer: modelContainer,
+            historyStore: historyStore,
             anchorResolver: anchorResolver,
             settings: settings,
             onPaste: { [weak self] item in
@@ -240,6 +264,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func applyHistoryLimit() {
         historyStore?.limit = settings.maxItems
+        historyStore?.evictOverflowIfNeeded()
     }
 
     private func startRetentionSweep() {
@@ -262,6 +287,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startPermissionMonitor() {
+        // Poll in both directions: the grant can disappear mid-session (revoked in System
+        // Settings, or invalidated by a signature change after rebuild/auto-update), and the
+        // warning icon + "Accessibility Permission…" menu item are the only surfaces for it
+        // now that onboarding no longer re-prompts after first launch.
         let timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let button = self.statusItem?.button else { return }
@@ -297,6 +326,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func clearAll() {
         historyStore?.clearAll(keepPinned: true)
+    }
+
+    @objc private func openAccessibilityPermission() {
+        showOnboarding()
     }
 
     @objc private func quit() {

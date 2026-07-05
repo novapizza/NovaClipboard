@@ -3,12 +3,10 @@ import SwiftData
 
 @MainActor
 final class HistoryStore {
-    nonisolated(unsafe) static let defaultLimit = 500
-
     private let context: ModelContext
     var limit: Int
 
-    init(context: ModelContext, limit: Int = HistoryStore.defaultLimit) {
+    init(context: ModelContext, limit: Int) {
         self.context = context
         self.limit = limit
     }
@@ -17,6 +15,9 @@ final class HistoryStore {
     func insert(_ item: ClipboardItem) -> ClipboardItem {
         if let dup = findRecentDuplicate(checksum: item.checksum) {
             dup.createdAt = Date()
+            // Refresh source attribution to the most recent copy so blocklist /
+            // analytics reflect where the content came from this time.
+            dup.sourceBundleID = item.sourceBundleID
             // Free up the new item's external image file (it was written eagerly by Monitor).
             ImageStore.deleteFile(at: item.imagePath)
             try? context.save()
@@ -65,34 +66,22 @@ final class HistoryStore {
         return (try? context.fetch(descriptor)) ?? []
     }
 
-    func search(query: String, type: ItemType? = nil, pinnedOnly: Bool = false) -> [ClipboardItem] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let typeRaw = type?.rawValue
-        let descriptor = FetchDescriptor<ClipboardItem>(
-            predicate: #Predicate { item in
-                (typeRaw == nil || item.typeRaw == typeRaw!) &&
-                (!pinnedOnly || item.isPinned) &&
-                (trimmed.isEmpty || item.preview.localizedStandardContains(trimmed))
-            },
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-        )
-        return (try? context.fetch(descriptor)) ?? []
-    }
-
     /// Dedup against the most-recent N items by checksum (Spec §3.2 / Plan Step 3.2).
     /// Re-copying an older item refreshes its `createdAt` rather than inserting a duplicate.
-    private static let dedupWindow = 50
+    /// Window grows with `limit` so the dedup window always covers the visible history.
+    private static let minDedupWindow = 50
+    private var dedupWindow: Int { max(HistoryStore.minDedupWindow, limit) }
 
     private func findRecentDuplicate(checksum: String) -> ClipboardItem? {
         var descriptor = FetchDescriptor<ClipboardItem>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        descriptor.fetchLimit = HistoryStore.dedupWindow
+        descriptor.fetchLimit = dedupWindow
         let recent = (try? context.fetch(descriptor)) ?? []
         return recent.first(where: { $0.checksum == checksum })
     }
 
-    private func evictOverflowIfNeeded() {
+    func evictOverflowIfNeeded() {
         let countDescriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate { !$0.isPinned }
         )
@@ -110,5 +99,6 @@ final class HistoryStore {
             ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
+        try? context.save()
     }
 }

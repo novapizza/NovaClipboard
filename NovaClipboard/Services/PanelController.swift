@@ -10,6 +10,7 @@ final class PanelController {
     static let panelSize = CGSize(width: 380, height: 480)
 
     private let modelContainer: ModelContainer
+    private let historyStore: HistoryStore
     private let anchorResolver: PanelAnchorResolver
     private let settings: AppSettings
     private let onPaste: (ClipboardItem) -> Void
@@ -18,11 +19,13 @@ final class PanelController {
 
     init(
         modelContainer: ModelContainer,
+        historyStore: HistoryStore,
         anchorResolver: PanelAnchorResolver,
         settings: AppSettings,
         onPaste: @escaping (ClipboardItem) -> Void
     ) {
         self.modelContainer = modelContainer
+        self.historyStore = historyStore
         self.anchorResolver = anchorResolver
         self.settings = settings
         self.onPaste = onPaste
@@ -73,6 +76,7 @@ final class PanelController {
 
     private func makePanel() -> NSPanel {
         let contentView = HistoryPanelView(
+            store: historyStore,
             onPaste: { [weak self] item in
                 guard let self else { return }
                 panelLogger.info("PanelController.onPaste from row click/enter")
@@ -97,7 +101,8 @@ final class PanelController {
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.hidesOnDeactivate = false
-        panel.becomesKeyOnlyIfNeeded = false
+        // Key-window behavior is governed by `HistoryPanel.canBecomeKey` below;
+        // setting `becomesKeyOnlyIfNeeded` here conflicts with `.nonactivatingPanel`.
         panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.backgroundColor = .clear
@@ -106,7 +111,13 @@ final class PanelController {
         panel.contentView?.layer?.cornerRadius = 10
         panel.contentView?.layer?.masksToBounds = true
 
-        panel.onResignKey = { [weak self] in self?.hide() }
+        panel.onResignKey = { [weak self] in
+            // Skip hide while a dialog owns focus, otherwise the dialog loses its
+            // parent and the UI breaks. confirmationDialog is a window-attached sheet
+            // (never sets NSApp.modalWindow), so check attachedSheet as well.
+            if NSApp.modalWindow != nil || self?.panel?.attachedSheet != nil { return }
+            self?.hide()
+        }
         return panel
     }
 }

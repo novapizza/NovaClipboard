@@ -5,7 +5,10 @@ import os
 private let imageStoreLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "ImageStore")
 
 enum ImageStore {
-    static let inlineLimitBytes = 1_024 * 1_024
+    /// Aligned with SwiftData's own external-storage spill threshold (~128 KB) so the
+    /// `@Attribute(.externalStorage)` on `imageBlob` doesn't silently duplicate the
+    /// disk-spill that our `imagePath` tier already performs for larger images.
+    static let inlineLimitBytes = 128 * 1_024
 
     static var imagesDirectory: URL {
         let fm = FileManager.default
@@ -22,7 +25,8 @@ enum ImageStore {
         return dir
     }
 
-    /// Persists image data — inline (< 1MB) or to disk as PNG file. Returns the on-disk path if a file was written.
+    /// Persists image data to disk as a PNG file when the blob exceeds `inlineLimitBytes`.
+    /// Returns the on-disk path if a file was written; otherwise nil (callers keep it inline).
     @discardableResult
     static func write(data: Data, id: UUID) -> String? {
         guard data.count >= inlineLimitBytes else { return nil }
@@ -52,39 +56,77 @@ enum ImageStore {
 final class ImageThumbnailCache {
     static let shared = ImageThumbnailCache()
     private let cache = NSCache<NSString, NSImage>()
-    private let thumbnailSize = CGSize(width: 128, height: 128)
+    private static let thumbnailSize = CGSize(width: 128, height: 128)
 
     private init() {
         cache.countLimit = 200
     }
 
-    func thumbnail(for item: ClipboardItem) -> NSImage? {
+    /// Synchronous cache hit. Returns nil on miss — callers should follow up with `loadThumbnail`.
+    func cached(for item: ClipboardItem) -> NSImage? {
+        cache.object(forKey: item.id.uuidString as NSString)
+    }
+
+    /// Loads & rasterizes the thumbnail off the main thread on a cache miss, then memoizes it.
+    func loadThumbnail(for item: ClipboardItem) async -> NSImage? {
         let key = item.id.uuidString as NSString
-        if let cached = cache.object(forKey: key) { return cached }
-        guard let image = ImageStore.loadImage(blob: item.imageBlob, path: item.imagePath) else {
-            return nil
+        if let hit = cache.object(forKey: key) { return hit }
+
+        let blob = item.imageBlob
+        let path = item.imagePath
+        let size = ImageThumbnailCache.thumbnailSize
+        let rendered = await Task.detached(priority: .userInitiated) { () -> NSImage? in
+            guard let image = ImageStore.loadImage(blob: blob, path: path) else { return nil }
+            return ImageThumbnailCache.makeThumbnail(image: image, size: size)
+        }.value
+
+        if let rendered {
+            cache.setObject(rendered, forKey: key)
         }
-        let thumb = makeThumbnail(image: image, size: thumbnailSize)
-        cache.setObject(thumb, forKey: key)
-        return thumb
+        return rendered
     }
 
     func invalidate(id: UUID) {
         cache.removeObject(forKey: id.uuidString as NSString)
     }
 
-    private func makeThumbnail(image: NSImage, size: CGSize) -> NSImage {
+    /// Rasterizes into an offscreen `NSBitmapImageRep` instead of relying on `lockFocus` so
+    /// this can run off the main thread and survives `lockFocus`'s deprecation in macOS 15+.
+    nonisolated static func makeThumbnail(image: NSImage, size: CGSize) -> NSImage {
         let original = image.size
         guard original.width > 0, original.height > 0 else { return image }
         let scale = min(size.width / original.width, size.height / original.height, 1.0)
         let target = CGSize(width: original.width * scale, height: original.height * scale)
+
+        let pixelsWide = Int(target.width.rounded())
+        let pixelsHigh = Int(target.height.rounded())
+        guard pixelsWide > 0, pixelsHigh > 0,
+              let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil,
+                pixelsWide: pixelsWide,
+                pixelsHigh: pixelsHigh,
+                bitsPerSample: 8,
+                samplesPerPixel: 4,
+                hasAlpha: true,
+                isPlanar: false,
+                colorSpaceName: .deviceRGB,
+                bytesPerRow: 0,
+                bitsPerPixel: 32
+              ) else { return image }
+        rep.size = target
+
+        if let ctx = NSGraphicsContext(bitmapImageRep: rep) {
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = ctx
+            image.draw(in: NSRect(origin: .zero, size: target),
+                       from: NSRect(origin: .zero, size: original),
+                       operation: .copy,
+                       fraction: 1.0)
+            NSGraphicsContext.restoreGraphicsState()
+        }
+
         let thumb = NSImage(size: target)
-        thumb.lockFocus()
-        image.draw(in: CGRect(origin: .zero, size: target),
-                   from: CGRect(origin: .zero, size: original),
-                   operation: .copy,
-                   fraction: 1.0)
-        thumb.unlockFocus()
+        thumb.addRepresentation(rep)
         return thumb
     }
 }
