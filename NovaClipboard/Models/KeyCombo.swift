@@ -28,14 +28,28 @@ struct KeyCombo: Equatable, Codable {
         KeyCombo.modifierSymbols(modifiers) + KeyCombo.keyName(for: keyCode)
     }
 
-    /// Symbol prefix for a Carbon modifier mask (e.g. `⌥⌘`). Empty if no modifiers.
+    /// Symbol prefix for a Carbon modifier mask (e.g. `⌘⇧`). Empty if no modifiers.
+    /// Command is listed first (rather than the Apple `⌃⌥⇧⌘` order that puts it last)
+    /// because every NovaClipboard shortcut is Command-based — leading with `⌘` matches
+    /// how users read the combo ("command + shift + V") and avoids the misconception that
+    /// the shortcut starts with Shift/Option.
     static func modifierSymbols(_ modifiers: UInt32) -> String {
         var parts: [String] = []
+        if modifiers & UInt32(cmdKey) != 0 { parts.append("⌘") }
         if modifiers & UInt32(controlKey) != 0 { parts.append("⌃") }
         if modifiers & UInt32(optionKey) != 0 { parts.append("⌥") }
         if modifiers & UInt32(shiftKey) != 0 { parts.append("⇧") }
-        if modifiers & UInt32(cmdKey) != 0 { parts.append("⌘") }
         return parts.joined()
+    }
+
+    /// Cocoa modifier flags for a Carbon modifier mask — the inverse of `carbonModifiers(from:)`.
+    static func cocoaModifiers(from carbon: UInt32) -> NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if carbon & UInt32(cmdKey) != 0 { flags.insert(.command) }
+        if carbon & UInt32(shiftKey) != 0 { flags.insert(.shift) }
+        if carbon & UInt32(optionKey) != 0 { flags.insert(.option) }
+        if carbon & UInt32(controlKey) != 0 { flags.insert(.control) }
+        return flags
     }
 
     private static func carbonModifiers(from cocoa: NSEvent.ModifierFlags) -> UInt32 {

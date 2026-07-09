@@ -42,20 +42,38 @@ private struct GeneralTab: View {
 
     var body: some View {
         Form {
+            Picker("Language", selection: $settings.appLanguage) {
+                ForEach(AppLanguage.allCases) { language in
+                    Text(language.displayName).tag(language)
+                }
+            }
+            .onChange(of: settings.appLanguage) { _, _ in promptLanguageRestart() }
+
             Toggle("Launch at login", isOn: $settings.launchAtLogin)
 
-            Toggle("Capture screenshots automatically", isOn: $settings.captureScreenshots)
-                .help("Save new screenshots (⌘⇧3/4/5) to history the moment they're written to disk.")
+            Toggle(isOn: $settings.captureScreenshots) {
+                LabelWithInfo("Capture screenshots automatically",
+                              info: "Save new screenshots (⌘⇧3/4/5) to history the moment they're written to disk.")
+            }
 
-            Toggle("Skip macOS preview thumbnail (instant capture)",
-                   isOn: $settings.disableScreenshotPreview)
-                .help("Disables the floating screenshot preview so files land on Desktop immediately. Takes effect on the next ⌘⇧3/4/5 capture.")
-                .disabled(!settings.captureScreenshots)
+            Toggle(isOn: $settings.disableScreenshotPreview) {
+                LabelWithInfo("Skip macOS preview thumbnail (instant capture)",
+                              info: "Disables the floating screenshot preview so files land on Desktop immediately. Takes effect on the next ⌘⇧3/4/5 capture.")
+            }
+            .disabled(!settings.captureScreenshots)
+
+            Toggle(isOn: $settings.copyScreenshotToClipboard) {
+                LabelWithInfo("Copy new screenshots to the clipboard",
+                              info: "Place each captured screenshot on the clipboard so you can paste it with ⌘V right after ⌘⇧3/4/5 — macOS otherwise only saves the file.")
+            }
+            .disabled(!settings.captureScreenshots)
 
             HotKeyPicker(combo: $settings.hotKey)
 
-            Toggle("Quick paste by number", isOn: $settings.quickPasteEnabled)
-                .help("Paste the Nth most recent item directly (slot 1 = newest) without opening the panel.")
+            Toggle(isOn: $settings.quickPasteEnabled) {
+                LabelWithInfo("Quick paste by number",
+                              info: "Paste the Nth most recent item directly (slot 1 = newest) without opening the panel.")
+            }
 
             if settings.quickPasteEnabled {
                 QuickPasteHotKeyPicker(modifiers: $settings.quickPasteModifiers)
@@ -86,6 +104,28 @@ private struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// The bundle only reads the language override at launch, so offer to relaunch
+    /// immediately. Declining leaves the new language to take effect on the next start.
+    private func promptLanguageRestart() {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Restart required")
+        alert.informativeText = String(localized: "NovaClipboard needs to restart to change the language.")
+        alert.addButton(withTitle: String(localized: "Restart Now"))
+        alert.addButton(withTitle: String(localized: "Later"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            relaunchApp()
+        }
+    }
+
+    private func relaunchApp() {
+        let url = Bundle.main.bundleURL
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: url, configuration: configuration) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
     }
 }
 
@@ -178,11 +218,6 @@ private struct PrivacyTab: View {
                     .frame(minHeight: 100, maxHeight: 160)
                 }
             }
-            #if DEBUG
-            Toggle("Ignore password fields", isOn: $settings.ignorePasswordFields)
-                .help("Active in Phase 3 — currently placeholder.")
-                .disabled(true)
-            #endif
         }
         .formStyle(.grouped)
     }
@@ -208,11 +243,11 @@ private struct AboutTab: View {
                 .padding(.vertical, 4)
                 .liquidGlass(.regular, in: .capsule)
             HStack(spacing: 10) {
-                Link(destination: URL(string: "mailto:haunc@creativeforce.io")!) {
+                Link(destination: URL(string: "mailto:nch180297@gmail.com")!) {
                     Label("Send feedback", systemImage: "envelope")
                 }
                 .buttonStyle(.liquidGlass())
-                Link(destination: URL(string: "https://github.com/creativeforce")!) {
+                Link(destination: URL(string: "https://github.com/novapizza/NovaClipboard")!) {
                     Label("GitHub", systemImage: "arrow.up.right.square")
                 }
                 .buttonStyle(.liquidGlass())
@@ -229,6 +264,50 @@ private struct AboutTab: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Info tooltip
+
+/// A control label paired with a trailing info icon. Hovering the icon shows the
+/// explanatory text instantly in a popover, replacing the hard-to-discover
+/// system `.help()` tooltip (which only appears after a delay).
+private struct LabelWithInfo: View {
+    let title: LocalizedStringKey
+    let info: LocalizedStringKey
+
+    init(_ title: LocalizedStringKey, info: LocalizedStringKey) {
+        self.title = title
+        self.info = info
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Text(title)
+            InfoTip(text: info)
+        }
+    }
+}
+
+/// An `info.circle` icon that reveals `text` in a popover the moment the pointer
+/// enters it, and dismisses it on exit.
+private struct InfoTip: View {
+    let text: LocalizedStringKey
+    @State private var isHovering = false
+
+    var body: some View {
+        Image(systemName: "info.circle")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .onHover { isHovering = $0 }
+            .popover(isPresented: $isHovering, arrowEdge: .bottom) {
+                Text(text)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 240, alignment: .leading)
+                    .padding(12)
+            }
+            .accessibilityLabel(Text(text))
     }
 }
 
@@ -264,7 +343,8 @@ private struct QuickPasteHotKeyPicker: View {
 
     var body: some View {
         HStack {
-            Text("Quick paste hotkey")
+            LabelWithInfo("Quick paste hotkey",
+                          info: "Press a combo like ⌥⌘ + any key. Only its modifiers are used; the digits 1–9 pick the item.")
             Spacer()
             Button {
                 capturing.toggle()
@@ -274,7 +354,6 @@ private struct QuickPasteHotKeyPicker: View {
                     .frame(minWidth: 100)
             }
             .buttonStyle(.liquidGlass(tint: capturing ? .accentColor : nil))
-            .help("Press a combo like ⌥⌘ + any key. Only its modifiers are used; the digits 1–9 pick the item.")
             // Reuse the panel hotkey capture and keep only the modifier mask —
             // the digit is fixed to the slot number.
             .background(HotKeyCapture(active: capturing) { newCombo in
