@@ -1,5 +1,9 @@
 # NovaClipboard
 
+**English** · [Tiếng Việt](README.vi.md)
+
+Website: [novasuite.coding4pizza.com/novaclipboard](https://novasuite.coding4pizza.com/novaclipboard)
+
 A native macOS menu-bar clipboard manager. Press a hotkey, pick from your recent copies, paste into the active app — no Dock icon, no servers, all data stays on your Mac.
 
 ## Features
@@ -8,13 +12,15 @@ A native macOS menu-bar clipboard manager. Press a hotkey, pick from your recent
 - Global hotkey to summon a history panel anchored next to your caret, the mouse, or a fixed position.
 - Captures **text, rich text, links, images, and file references** from `NSPasteboard`.
 - **Auto-captures screenshots from disk** — `⌘⇧3/4/5` files written to `~/Desktop` (or your configured screenshot location) flow into history via FSEvents, even when nothing lands on the clipboard.
-- Optional "skip macOS preview thumbnail" toggle so screenshots land on disk immediately (toggles `com.apple.screencapture show-thumbnail`).
-- Pinning, `⌘1..⌘9` quick paste, and hover-reveal row actions (pin / delete).
-- Status-bar menu: Show History, Settings, Clear All (keep pinned), Quit.
-- Settings for hotkey, panel position, history limits, image-size cap, retention (Forever / 7d / 30d), launch-at-login, blocked apps, screenshot capture.
+- Optional "skip macOS preview thumbnail" toggle so screenshots land on disk immediately (toggles `com.apple.screencapture show-thumbnail`), and an optional "copy new screenshots to the clipboard" toggle so you can paste a fresh capture with `⌘V`.
+- Pinning, quick paste (`⌘⌥1..⌘⌥9` by default, modifier configurable), and hover-reveal row actions (pin / delete).
+- Status-bar menu: Show History, Settings, Clear All (keep pinned), Quit (plus a conditional "Accessibility Permission…" item when the grant is missing).
+- Settings for hotkey, quick-paste modifier, panel position, history limit, image-size cap, retention (Forever / 7d / 30d), launch-at-login, blocked apps, screenshot capture, and UI language.
 - Privacy: app source blocklist (1Password, LastPass, Bitwarden, Keychain Access pre-seeded) and concealed-type UTI filter — items marked `org.nspasteboard.ConcealedType` are skipped.
 - Pasteboard restore: previous clipboard contents are restored shortly after a paste so your in-progress copy is preserved.
-- Dedup by SHA-256 checksum; large image blobs (≥ 1 MB) spill to disk under the app container.
+- Dedup by SHA-256 checksum; image blobs ≥ 128 KB spill from the database to files under the app container.
+- Localized in **English** and **Tiếng Việt** (auto-follows the system language, or pin one in Settings → General).
+- Auto-updates via [Sparkle](https://sparkle-project.org).
 
 ## Default hotkey
 
@@ -23,10 +29,14 @@ A native macOS menu-bar clipboard manager. Press a hotkey, pick from your recent
 In the panel:
 - `↑` / `↓` move selection
 - `↵` paste the selected item
-- `⌘1..⌘9` quick-paste the first nine rows (pinned first, then recent)
+- `⌘⌥1..⌘⌥9` quick-paste the first nine rows (pinned first, then recent) — the modifier mirrors the one set in Settings
 - `⌘P` toggle pin on the selected item
 - `⌫` delete the selected item
 - `Esc` or click outside dismisses the panel
+
+Quick paste also works globally (without opening the panel): `⌘⌥1..⌘⌥9` pastes the Nth most-recent item straight into the active app. Toggle it and change the modifier in Settings → General.
+
+> The default quick-paste modifier is `⌘⌥` (not `⌘⇧`) on purpose: `⌘⇧3/4/5` collide with macOS's own screenshot shortcuts.
 
 ## Build & run from Xcode
 
@@ -50,6 +60,12 @@ For a quick command-line build without code signing:
 xcodebuild -project NovaClipboard.xcodeproj -scheme NovaClipboard -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```
 
+And to run the tests from the command line (the app builds first — the test target is linked via `BUNDLE_LOADER`/`TEST_HOST`):
+
+```
+xcodebuild -project NovaClipboard.xcodeproj -scheme NovaClipboard -configuration Debug CODE_SIGNING_ALLOWED=NO test
+```
+
 > **Keep the same signing team across rebuilds.** macOS ties Accessibility permission to the code signature. Switching teams (or removing/adding the cert) invalidates the grant and you will need to re-enable it.
 
 ## Granting Accessibility permission
@@ -70,8 +86,8 @@ Enabled by default on first run via `SMAppService`. The OS-level state is synced
 ## Data storage
 
 - SwiftData store: `~/Library/Containers/io.haunc.NovaClipboard/Data/Library/Application Support/`
-- Large image blobs (≥ 1 MB) are written as files under the same container, alongside the database.
-- Nothing leaves the machine. The app has no `com.apple.security.network.client` entitlement (favicons aside — see below).
+- Image blobs ≥ 128 KB are written as PNG files under `NovaClipboard/Images/` in the same container; smaller blobs are stored inline in the database via SwiftData external storage.
+- Nothing leaves the machine. The app is not sandboxed and ships no network-client entitlement; the only outbound traffic is favicon fetches for link previews and the Sparkle update check.
 
 To reset everything: quit NovaClipboard, delete the container above, and relaunch.
 
@@ -79,14 +95,16 @@ To reset everything: quit NovaClipboard, delete the container above, and relaunc
 
 ```
 NovaClipboard/
-  App/            NSApplicationDelegate, scene wiring
+  App/            NSApplicationDelegate (composition root), scene wiring
   Models/         SwiftData @Model types, AppSettings, KeyCombo
   Services/       ClipboardMonitor, ScreenshotWatcher, HotKeyManager,
-                  PasteEngine, PanelController, PanelAnchorResolver, HistoryStore
+                  PasteEngine, PanelController, PanelAnchorResolver,
+                  HistoryStore, UpdateController (Sparkle)
   Features/       History panel (rows + panel view), Settings tabs, Onboarding
+  Design/         LiquidGlass shared view modifiers and button style
   Utilities/      Checksum, ImageStore, FaviconCache, LaunchAtLogin,
                   ScreenshotPreviewPreference
-  Resources/      Info.plist, Assets.xcassets
+  Resources/      Info.plist, Assets.xcassets, Localizable.xcstrings (en/vi)
 NovaClipboardTests/   XCTest target
 .docs/                PRD, Spec, Plan
 project.yml           XcodeGen spec

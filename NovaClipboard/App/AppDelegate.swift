@@ -71,9 +71,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appLogger.error("Failed to create ModelContainer: \(error.localizedDescription, privacy: .public)")
             let alert = NSAlert()
             alert.alertStyle = .critical
-            alert.messageText = "NovaClipboard cannot start"
-            alert.informativeText = "The clipboard database could not be opened.\n\n\(error.localizedDescription)\n\nThe app will now quit."
-            alert.addButton(withTitle: "Quit")
+            alert.messageText = String(localized: "NovaClipboard cannot start")
+            alert.informativeText = String(localized: "The clipboard database could not be opened.\n\n\(error.localizedDescription)\n\nThe app will now quit.")
+            alert.addButton(withTitle: String(localized: "Quit"))
             alert.runModal()
             NSApp.terminate(nil)
         }
@@ -86,16 +86,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        let showItem = NSMenuItem(title: "Show History", action: #selector(togglePanel), keyEquivalent: "")
+        let showItem = NSMenuItem(title: String(localized: "Show History"), action: #selector(togglePanel), keyEquivalent: "")
         showItem.target = self
         menu.addItem(showItem)
 
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         let updateItem = NSMenuItem(
-            title: "Check for Updates…",
+            title: String(localized: "Check for Updates…"),
             action: #selector(UpdateController.checkForUpdates(_:)),
             keyEquivalent: ""
         )
@@ -103,7 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(updateItem)
 
         let permissionItem = NSMenuItem(
-            title: "Accessibility Permission…",
+            title: String(localized: "Accessibility Permission…"),
             action: #selector(openAccessibilityPermission),
             keyEquivalent: ""
         )
@@ -114,13 +114,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let clearItem = NSMenuItem(title: "Clear All (keep pinned)", action: #selector(clearAll), keyEquivalent: "")
+        let clearItem = NSMenuItem(title: String(localized: "Clear All"), action: #selector(clearAll), keyEquivalent: "")
         clearItem.target = self
         menu.addItem(clearItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit NovaClipboard", action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: String(localized: "Quit NovaClipboard"), action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         item.menu = menu
@@ -213,8 +213,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let sizeKB = Double(pngData.count) / 1024.0
         let preview = sizeKB < 1024
-            ? String(format: "Screenshot · %.0f KB", sizeKB)
-            : String(format: "Screenshot · %.1f MB", sizeKB / 1024.0)
+            ? String(format: String(localized: "Screenshot · %.0f KB"), sizeKB)
+            : String(format: String(localized: "Screenshot · %.1f MB"), sizeKB / 1024.0)
 
         let item = ClipboardItem(
             id: id,
@@ -228,6 +228,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         historyStore?.insert(item)
         appLogger.info("Inserted screenshot into history: \(url.lastPathComponent, privacy: .public)")
+
+        // macOS's ⌘⇧3/4/5 write the screenshot to a file, never to the pasteboard, so ⌘V
+        // can't paste what was just captured. Mirror it onto the clipboard here so the user
+        // can paste immediately. `ClipboardMonitor` will re-detect this write, but dedup by
+        // checksum collapses it back onto the row we just inserted.
+        if settings.copyScreenshotToClipboard {
+            copyImageToClipboard(pngData)
+        }
+    }
+
+    /// Writes PNG (plus a TIFF fallback for legacy consumers) onto the general pasteboard.
+    private func copyImageToClipboard(_ pngData: Data) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setData(pngData, forType: NSPasteboard.PasteboardType("public.png"))
+        if let rep = NSBitmapImageRep(data: pngData),
+           let tiff = rep.tiffRepresentation {
+            pasteboard.setData(tiff, forType: NSPasteboard.PasteboardType("public.tiff"))
+        }
     }
 
     private func setupSettingsBindings() {
@@ -355,7 +374,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let host = NSHostingController(rootView: SettingsView(settings: settings))
         let win = NSWindow(contentViewController: host)
-        win.title = "NovaClipboard Settings"
+        win.title = String(localized: "NovaClipboard Settings")
         win.styleMask = [.titled, .closable, .miniaturizable]
         win.isReleasedWhenClosed = false
         win.center()
@@ -389,7 +408,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.completeOnboarding()
         })
         let win = NSWindow(contentViewController: host)
-        win.title = "Welcome"
+        win.title = String(localized: "Welcome")
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
         win.center()

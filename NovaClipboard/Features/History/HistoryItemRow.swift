@@ -5,6 +5,8 @@ struct HistoryItemRow: View {
     let item: ClipboardItem
     let isSelected: Bool
     var quickPasteIndex: Int?
+    /// Modifier symbol prefix for the quick-paste badge (e.g. `⌥⌘`). When nil/empty the badge is hidden.
+    var quickPasteSymbols: String? = nil
     var onTogglePin: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
 
@@ -37,8 +39,9 @@ struct HistoryItemRow: View {
                 deleteButton
             }
 
-            if let quickPasteIndex, quickPasteIndex < 9 {
-                Text("⌘\(quickPasteIndex + 1)")
+            if let quickPasteIndex, quickPasteIndex < 9,
+               let quickPasteSymbols, !quickPasteSymbols.isEmpty {
+                Text("\(quickPasteSymbols)\(quickPasteIndex + 1)")
                     .font(.caption2.monospaced().weight(.semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
@@ -115,15 +118,15 @@ struct HistoryItemRow: View {
 
     private var accessibilityDescription: String {
         let relative = Self.relativeFormatter.localizedString(for: item.createdAt, relativeTo: Date())
-        let pin = item.isPinned ? "Pinned. " : ""
+        let pin = item.isPinned ? String(localized: "Pinned. ") : ""
         let kind: String
         switch item.type {
-        case .text, .richText: kind = "Text"
-        case .link: kind = "Link"
-        case .image: kind = "Image"
-        case .file: kind = "File"
+        case .text, .richText: kind = String(localized: "Text")
+        case .link: kind = String(localized: "Link")
+        case .image: kind = String(localized: "Image")
+        case .file: kind = String(localized: "File")
         }
-        return "\(pin)\(kind). \(item.preview). Copied \(relative)."
+        return String(localized: "\(pin)\(kind). \(item.preview). Copied \(relative).")
     }
 
     @ViewBuilder

@@ -76,11 +76,23 @@ The restore is what lets users keep their in-progress copy. If you change the ti
 
 `HotKeyManager` registers a Carbon hotkey from `settings.hotKey` (`KeyCombo`). The handler calls `PanelController.toggle()`. `PanelController` builds an `NSPanel`, captures `NSWorkspace.shared.frontmostApplication` **before** showing (so paste can restore focus), and uses `PanelAnchorResolver` to position the panel at the caret (via AX APIs), mouse, or a fixed origin per `settings.panelPosition`. The panel hosts a SwiftUI `HistoryPanelView` through `NSHostingController`.
 
+`HotKeyManager` also owns the **quick-paste** slots: digit keys 1–9 (`registerQuickPaste`) share a single Carbon event handler with the panel hotkey, dispatched by `EventHotKeyID.id` (panel is id `1`; quick-paste slots are `quickPasteBaseID + digit`). Quick-paste bypasses the panel entirely — `AppDelegate.quickPaste(index:)` fetches the Nth most-recent item and calls `pasteEngine.paste` directly against the frontmost app. Toggled by `settings.quickPasteEnabled` with a configurable modifier mask (`settings.quickPasteModifiers`, default ⌘⇧); both flow through `applyQuickPasteHotKeys()` via the settings bindings, not direct calls.
+
 ### Permissions
 
 Accessibility is required for both ⌘V synthesis and caret detection. `AppDelegate.startPermissionMonitor` polls `AXIsProcessTrusted()` every 3 s and swaps the status-item SF Symbol (`doc.on.clipboard` ↔ `exclamationmark.triangle`). The onboarding window auto-shows only on the genuine first launch (`!settings.hasOnboarded`); a later revocation is surfaced by the warning icon and the conditional "Accessibility Permission…" menu item.
 
 Launch-at-login uses `SMAppService` via `Utilities/LaunchAtLogin.swift`; on first run the OS-level state is synced to match the in-app toggle so the UI cannot lie.
+
+### Updates & localization
+
+Auto-updates use **Sparkle** (SwiftPM dependency in `project.yml`). `Services/UpdateController.shared` wraps a single `SPUStandardUpdaterController`; the feed URL, EdDSA public key (`SUPublicEDKey`), and `SUEnableAutomaticChecks` live in `Info.plist`. CI overrides `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` from the git tag at archive time — local builds ship as `0.0.0-dev`.
+
+The app is localized **en + vi** (`CFBundleLocalizations` in `Info.plist`). Strings live in a single `Resources/Localizable.xcstrings` String Catalog; use `String(localized:)` (already used in ~5 files) for new user-facing text so Xcode auto-extracts the key into the catalog.
+
+### UI design layer
+
+`Design/LiquidGlass.swift` provides the shared look: `.liquidGlass(...)` / `.liquidGlassContainer(...)` view modifiers and `LiquidGlassButtonStyle`. It uses the native SwiftUI `.glassEffect`/`Glass` APIs when available and falls back to a hand-rolled material background on older systems — prefer these helpers over ad-hoc backgrounds when styling panel/settings UI.
 
 ## Project layout
 
@@ -88,7 +100,9 @@ Launch-at-login uses `SMAppService` via `Utilities/LaunchAtLogin.swift`; on firs
 - `Models/` — `ClipboardItem` (`@Model`), `AppSettings` (`UserDefaults`-backed `ObservableObject`), `KeyCombo`.
 - `Services/` — pipelines and singletons listed above.
 - `Features/` — SwiftUI views: `History/` (panel + row), `Settings/`, `Onboarding/`.
+- `Design/` — `LiquidGlass` shared view modifiers and button style.
 - `Utilities/` — `Checksum`, `ImageStore`, `FaviconCache`, `LaunchAtLogin`, `ScreenshotPreviewPreference`.
-- `Resources/Info.plist` — note `LSUIElement: true`; the plist is hand-edited (`GENERATE_INFOPLIST_FILE: NO`).
+- `Resources/Info.plist` — note `LSUIElement: true`; the plist is hand-edited (`GENERATE_INFOPLIST_FILE: NO`). Also holds Sparkle (`SUFeedURL`, `SUPublicEDKey`) and `CFBundleLocalizations`.
+- `Resources/Localizable.xcstrings` — String Catalog for en/vi UI strings.
 - `.docs/` — `prd.md`, `spec.md`, `plan.md` define the product contract and section numbers referenced from code comments.
 - `project.yml` — single source of truth for the Xcode project.

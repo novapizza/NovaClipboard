@@ -36,6 +36,7 @@
 		EBD1149D299ADF7F48358626 /* PasteboardSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CFB3599DB4BE8516413427 /* PasteboardSnapshotTests.swift */; };
 		EC227B2F00F0B304BAEFAA14 /* Checksum.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2839AAA4769A6D20370FAE5 /* Checksum.swift */; };
 		F08DCEA8E547C9925D0BBBE2 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955735144218A9D2E6DCC3E9 /* UpdateController.swift */; };
+		FAC23BE2FE7C6937CA1323AC /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = FE2A45463B5D59DC23A5D5BE /* Localizable.xcstrings */; };
 		FD0B2B22F9390C7851AFC264 /* HistoryPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E983524F663810FD4E66441 /* HistoryPanelView.swift */; };
 /* End PBXBuildFile section */
 
@@ -82,6 +83,7 @@
 		DF95A37032D7AE660B825C15 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DFF0194B8B583443AF9DE740 /* PanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelController.swift; sourceTree = "<group>"; };
 		F241ED3463525A2120CD596E /* NovaClipboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NovaClipboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE2A45463B5D59DC23A5D5BE /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +148,7 @@
 			children = (
 				42E7E7CDDB49F0905727B7BF /* Assets.xcassets */,
 				DF95A37032D7AE660B825C15 /* Info.plist */,
+				FE2A45463B5D59DC23A5D5BE /* Localizable.xcstrings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -302,6 +305,7 @@
 			knownRegions = (
 				Base,
 				en,
+				vi,
 			);
 			mainGroup = AA3B1BD866BD93929842A5A0;
 			minimizedProjectReferenceProxies = 1;
@@ -325,6 +329,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AF8CF91FC1F453A70416C35F /* Assets.xcassets in Resources */,
+				FAC23BE2FE7C6937CA1323AC /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

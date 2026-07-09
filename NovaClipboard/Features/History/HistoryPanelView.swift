@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import Carbon.HIToolbox
 
 struct HistoryPanelView: View {
     /// Cap on unpinned rows hydrated into the panel. Bigger histories still live in the
@@ -12,6 +13,14 @@ struct HistoryPanelView: View {
 
     @State private var selectedID: PersistentIdentifier?
     @State private var showClearAllConfirm: Bool = false
+
+    @ObservedObject private var settings = AppSettings.shared
+
+    /// Modifier symbol prefix for quick-paste badges, mirroring the Settings combo.
+    /// Empty when quick-paste is disabled, which also hides the badges.
+    private var quickPasteSymbols: String {
+        settings.quickPasteEnabled ? KeyCombo.modifierSymbols(settings.quickPasteModifiers) : ""
+    }
 
     let store: HistoryStore
     let onPaste: (ClipboardItem) -> Void
@@ -143,7 +152,7 @@ struct HistoryPanelView: View {
                     let pinnedCount = pinnedItems.count
                     ForEach(Array(visibleItems.enumerated()), id: \.element.persistentModelID) { idx, item in
                         if pinnedCount > 0 && idx == pinnedCount && !recentItems.isEmpty {
-                            sectionHeader("Recent")
+                            sectionHeader(String(localized: "Recent"))
                         }
                         row(for: item, quickIdx: idx)
                     }
@@ -180,7 +189,7 @@ struct HistoryPanelView: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func shortcutChip(_ key: String, _ label: String) -> some View {
+    private func shortcutChip(_ key: String, _ label: LocalizedStringKey) -> some View {
         HStack(spacing: 4) {
             Text(key)
                 .font(.caption2.monospaced().weight(.semibold))
@@ -213,6 +222,7 @@ struct HistoryPanelView: View {
                 item: item,
                 isSelected: item.persistentModelID == selectedID,
                 quickPasteIndex: quickIdx,
+                quickPasteSymbols: quickPasteSymbols,
                 onTogglePin: { store.togglePin(item) },
                 onDelete: { store.delete(item) }
             )
@@ -337,11 +347,12 @@ private final class KeyCaptureView: NSView {
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let cmd = mods.contains(.command)
 
-        // ⌘1..⌘9 quick paste
-        if cmd, mods.subtracting(.command).isEmpty,
-           let chars = event.charactersIgnoringModifiers,
-           let digit = chars.first?.wholeNumberValue,
-           digit >= 1, digit <= 9 {
+        // Quick paste — match the modifier combo configured in Settings (default ⌥⌘)
+        // so the in-panel shortcut stays in sync with the global quick-paste hotkey.
+        let settings = AppSettings.shared
+        let quickPasteMods = KeyCombo.cocoaModifiers(from: settings.quickPasteModifiers)
+        if settings.quickPasteEnabled, !quickPasteMods.isEmpty, mods == quickPasteMods,
+           let digit = Self.digit(forKeyCode: event.keyCode) {
             actions.onQuickPaste(digit - 1)
             return
         }
@@ -360,6 +371,23 @@ private final class KeyCaptureView: NSView {
         case 51: // delete/backspace
             actions.onDelete()
         default: super.keyDown(with: event)
+        }
+    }
+
+    /// Maps a top-row number key's virtual keycode to its digit (1–9), layout-independent
+    /// so quick-paste works regardless of which modifiers (e.g. ⇧) are in the combo.
+    private static func digit(forKeyCode keyCode: UInt16) -> Int? {
+        switch Int(keyCode) {
+        case kVK_ANSI_1: return 1
+        case kVK_ANSI_2: return 2
+        case kVK_ANSI_3: return 3
+        case kVK_ANSI_4: return 4
+        case kVK_ANSI_5: return 5
+        case kVK_ANSI_6: return 6
+        case kVK_ANSI_7: return 7
+        case kVK_ANSI_8: return 8
+        case kVK_ANSI_9: return 9
+        default: return nil
         }
     }
 }

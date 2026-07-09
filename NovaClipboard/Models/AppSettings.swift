@@ -13,9 +13,9 @@ enum RetentionPolicy: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .forever: return "Forever"
-        case .days7: return "7 days"
-        case .days30: return "30 days"
+        case .forever: return String(localized: "Forever")
+        case .days7: return String(localized: "7 days")
+        case .days30: return String(localized: "30 days")
         }
     }
 
@@ -24,6 +24,34 @@ enum RetentionPolicy: String, Codable, CaseIterable, Identifiable {
         case .forever: return nil
         case .days7: return 60 * 60 * 24 * 7
         case .days30: return 60 * 60 * 24 * 30
+        }
+    }
+}
+
+/// UI language selection. `.system` follows the macOS language order; the other cases
+/// pin the app to a single language by overriding the app-domain `AppleLanguages` key.
+/// Changes take effect on the next launch (see `AppSettings.applyAppLanguage`).
+enum AppLanguage: String, Codable, CaseIterable, Identifiable {
+    case system
+    case en
+    case vi
+
+    var id: String { rawValue }
+
+    /// Language codes written to `AppleLanguages`; nil means "clear the override".
+    var localeIdentifiers: [String]? {
+        switch self {
+        case .system: return nil
+        case .en: return ["en"]
+        case .vi: return ["vi"]
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .system: return String(localized: "Automatic")
+        case .en: return "English"
+        case .vi: return "Tiếng Việt"
         }
     }
 }
@@ -79,8 +107,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(retention.rawValue, forKey: Key.retention.rawValue) }
     }
 
-    @Published var ignorePasswordFields: Bool {
-        didSet { defaults.set(ignorePasswordFields, forKey: Key.ignorePasswordFields.rawValue) }
+    /// When true, a screenshot ingested from disk is also placed on the system clipboard so
+    /// the user can paste it immediately with ⌘V — macOS's default `⌘⇧3/4/5` only writes a
+    /// file, never the pasteboard.
+    @Published var copyScreenshotToClipboard: Bool {
+        didSet { defaults.set(copyScreenshotToClipboard, forKey: Key.copyScreenshotToClipboard.rawValue) }
     }
 
     @Published var captureScreenshots: Bool {
@@ -125,6 +156,15 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(Int(quickPasteModifiers), forKey: Key.quickPasteModifiers.rawValue) }
     }
 
+    /// UI language override. Persisted here and mirrored into the app-domain
+    /// `AppleLanguages` key so it applies on the next launch.
+    @Published var appLanguage: AppLanguage {
+        didSet {
+            defaults.set(appLanguage.rawValue, forKey: Key.appLanguage.rawValue)
+            applyAppLanguage()
+        }
+    }
+
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
@@ -141,8 +181,8 @@ final class AppSettings: ObservableObject {
         self.maxImageMB = (defaults.object(forKey: Key.maxImageMB.rawValue) as? Int) ?? 4
         self.retention = (defaults.string(forKey: Key.retention.rawValue)
             .flatMap(RetentionPolicy.init(rawValue:))) ?? .forever
-        self.ignorePasswordFields = (defaults.object(forKey: Key.ignorePasswordFields.rawValue) as? Bool) ?? true
         self.captureScreenshots = (defaults.object(forKey: Key.captureScreenshots.rawValue) as? Bool) ?? true
+        self.copyScreenshotToClipboard = (defaults.object(forKey: Key.copyScreenshotToClipboard.rawValue) as? Bool) ?? true
         // Pick up the existing system value on first launch so the toggle reflects reality.
         self.disableScreenshotPreview = (defaults.object(forKey: Key.disableScreenshotPreview.rawValue) as? Bool)
             ?? ScreenshotPreviewPreference.isThumbnailDisabled()
@@ -154,14 +194,29 @@ final class AppSettings: ObservableObject {
         }
         self.hasOnboarded = defaults.bool(forKey: Key.hasOnboarded.rawValue)
         self.quickPasteEnabled = (defaults.object(forKey: Key.quickPasteEnabled.rawValue) as? Bool) ?? true
+        // Default to ⌘⌥ rather than ⌘⇧: the latter would register ⌘⇧3/4/5, which collide
+        // exactly with macOS's screenshot shortcuts and cause NovaClipboard to hijack the
+        // capture (and clobber the clipboard) whenever the user takes a screenshot.
         self.quickPasteModifiers = (defaults.object(forKey: Key.quickPasteModifiers.rawValue) as? Int)
-            .map(UInt32.init) ?? UInt32(cmdKey | shiftKey)
+            .map(UInt32.init) ?? UInt32(cmdKey | optionKey)
+        self.appLanguage = (defaults.string(forKey: Key.appLanguage.rawValue)
+            .flatMap(AppLanguage.init(rawValue:))) ?? .system
 
         // First launch: persist default-true and register the login item so
         // the OS-level state matches the UI (didSet doesn't fire during init).
         if storedLaunchAtLogin == nil {
             defaults.set(true, forKey: Key.launchAtLogin.rawValue)
             LaunchAtLogin.set(enabled: true)
+        }
+    }
+
+    /// Mirror the language choice into the app-domain `AppleLanguages` key.
+    /// The bundle reads this only at launch, so callers must relaunch to apply it.
+    private func applyAppLanguage() {
+        if let identifiers = appLanguage.localeIdentifiers {
+            defaults.set(identifiers, forKey: "AppleLanguages")
+        } else {
+            defaults.removeObject(forKey: "AppleLanguages")
         }
     }
 
@@ -188,12 +243,13 @@ final class AppSettings: ObservableObject {
         case maxItems
         case maxImageMB
         case retention
-        case ignorePasswordFields
         case captureScreenshots
+        case copyScreenshotToClipboard
         case disableScreenshotPreview
         case blocklistBundleIDs
         case hasOnboarded
         case quickPasteEnabled
         case quickPasteModifiers
+        case appLanguage
     }
 }
