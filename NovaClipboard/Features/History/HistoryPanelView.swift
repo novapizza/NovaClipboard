@@ -11,6 +11,10 @@ struct HistoryPanelView: View {
     @Query private var recentItems: [ClipboardItem]
 
     @State private var selectedID: PersistentIdentifier?
+    /// Set when the pending `selectedID` change came from mouse hover. The hovered
+    /// row is already on screen, so scrolling it to center would only slide a new
+    /// row under the cursor and chain into runaway auto-scroll.
+    @State private var selectionFromHover: Bool = false
     @State private var showClearAllConfirm: Bool = false
 
     let store: HistoryStore
@@ -151,6 +155,10 @@ struct HistoryPanelView: View {
                 .padding(.vertical, 4)
             }
             .onChange(of: selectedID) { _, newValue in
+                if selectionFromHover {
+                    selectionFromHover = false
+                    return
+                }
                 guard let newValue else { return }
                 withAnimation(.linear(duration: 0.08)) {
                     proxy.scrollTo(newValue, anchor: .center)
@@ -220,7 +228,12 @@ struct HistoryPanelView: View {
         .buttonStyle(.plain)
         .id(item.persistentModelID)
         .onHover { hovering in
-            if hovering { selectedID = item.persistentModelID }
+            // Only flag real changes: re-hovering the selected row fires no
+            // `onChange`, so a stale flag would swallow the next keyboard scroll.
+            if hovering && selectedID != item.persistentModelID {
+                selectionFromHover = true
+                selectedID = item.persistentModelID
+            }
         }
     }
 
