@@ -6,6 +6,8 @@ enum PanelAnchor {
     case focusedElement(CGRect)
     case mouse(CGPoint)
     case fixed(CGPoint)
+    /// Frame of the menu-bar status item button, already in Cocoa screen coordinates.
+    case statusItem(CGRect)
 }
 
 enum PanelPositionPreference: String, Codable {
@@ -175,6 +177,8 @@ extension PanelAnchor {
                 return CGRect(origin: p, size: .zero)
             case .fixed(let p):
                 return CGRect(origin: p, size: .zero)
+            case .statusItem(let r):
+                return r
             }
         }()
 

@@ -8,9 +8,11 @@ import os
 private let appLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "AppDelegate")
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let settings = AppSettings.shared
     private var statusItem: NSStatusItem?
+    /// Shown on right-click (or Control-click) only; a left click opens the history panel.
+    private var statusMenu: NSMenu?
     private var modelContainer: ModelContainer?
     private var historyStore: HistoryStore?
     private var clipboardMonitor: ClipboardMonitor?
@@ -44,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Only auto-present the welcome window on the genuine first launch.
         // If Accessibility is revoked or invalidated later (e.g. signature change after rebuild
         // or auto-update), surface it via the menu-bar warning icon plus the conditional
-        // "Accessibility Permission…" menu item instead of popping a modal each launch.
+        // "Accessibility Permission" menu item instead of popping a modal each launch.
         if !settings.hasOnboarded {
             showOnboarding()
         }
@@ -83,6 +85,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
             updateStatusIcon(button: button)
+            button.target = self
+            button.action = #selector(statusItemClicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
         let menu = NSMenu()
@@ -90,12 +95,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showItem.target = self
         menu.addItem(showItem)
 
-        let settingsItem = NSMenuItem(title: String(localized: "Settings…"), action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: String(localized: "Settings"), action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         let updateItem = NSMenuItem(
-            title: String(localized: "Check for Updates…"),
+            title: String(localized: "Check for Updates"),
             action: #selector(UpdateController.checkForUpdates(_:)),
             keyEquivalent: ""
         )
@@ -103,7 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(updateItem)
 
         let permissionItem = NSMenuItem(
-            title: String(localized: "Accessibility Permission…"),
+            title: String(localized: "Accessibility Permission"),
             action: #selector(openAccessibilityPermission),
             keyEquivalent: ""
         )
@@ -120,10 +125,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: String(localized: "Quit NovaClipboard"), action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: String(localized: "Quit"), action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-        item.menu = menu
+
+        // macOS 27 auto-adds symbols to some items (e.g. a gear for Settings); hide them so
+        // every action in this menu looks the same.
+        if #available(macOS 27.0, *) {
+            for menuItem in menu.items {
+                menuItem.preferredImageVisibility = .hidden
+            }
+        }
+        statusMenu = menu
 
         statusItem = item
     }
@@ -135,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         image?.isTemplate = trusted
         button.image = image
         accessibilityMenuItem?.isHidden = trusted
+        panelController?.presentation.isAccessibilityTrusted = trusted
     }
 
     private func setupPanelController() {
@@ -144,11 +158,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             historyStore: historyStore,
             anchorResolver: anchorResolver,
             settings: settings,
+            onOpenSettings: { [weak self] in self?.openSettings() },
+            onOpenAccessibility: { [weak self] in self?.openAccessibilityPermission() },
             onPaste: { [weak self] item in
                 guard let self else { return }
                 let target = self.panelController?.frontmostAppBeforeShow
                 appLogger.info("AppDelegate.onPaste fired, target=\(target?.bundleIdentifier ?? "nil", privacy: .public)")
-                self.pasteEngine.paste(item: item, toApp: target)
+                self.pasteEngine.paste(
+                    item: item,
+                    toApp: target,
+                    restoreClipboard: self.settings.restoreClipboardAfterPaste
+                )
             }
         )
     }
@@ -319,7 +339,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let items = store.fetchAll(limit: index + 1)
         guard items.indices.contains(index) else { return }
         appLogger.info("quickPaste index=\(index, privacy: .public)")
-        pasteEngine.paste(item: items[index], toApp: target)
+        pasteEngine.paste(
+            item: items[index],
+            toApp: target,
+            restoreClipboard: settings.restoreClipboardAfterPaste
+        )
     }
 
     private func applyHistoryLimit() {
@@ -349,7 +373,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startPermissionMonitor() {
         // Poll in both directions: the grant can disappear mid-session (revoked in System
         // Settings, or invalidated by a signature change after rebuild/auto-update), and the
-        // warning icon + "Accessibility Permission…" menu item are the only surfaces for it
+        // warning icon + "Accessibility Permission" menu item are the only surfaces for it
         // now that onboarding no longer re-prompts after first launch.
         let timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -362,8 +386,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Menu actions
 
+    /// "Show History" from the right-click menu: open under the icon, like a left click.
     @objc private func togglePanel() {
-        panelController?.toggle()
+        guard let button = statusItem?.button, let rect = statusItemScreenRect(button) else {
+            panelController?.toggle()
+            return
+        }
+        panelController?.toggle(source: .statusItem(rect))
+    }
+
+    private func statusItemScreenRect(_ button: NSStatusBarButton) -> CGRect? {
+        guard let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        guard let statusItem else { return }
+        let event = NSApp.currentEvent
+        let wantsMenu = event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true
+        if wantsMenu {
+            panelController?.hide()
+            // Attach the menu only for this click so left clicks keep reaching this action.
+            statusItem.menu = statusMenu
+            sender.performClick(nil)
+            statusItem.menu = nil
+            return
+        }
+        guard let rect = statusItemScreenRect(sender) else { return }
+        panelController?.toggle(source: .statusItem(rect))
     }
 
     @objc private func openSettings() {
@@ -386,6 +436,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func clearAll() {
         historyStore?.clearAll(keepPinned: true)
+    }
+
+    // MARK: - NSMenuItemValidation
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(clearAll) {
+            guard let historyStore else { return false }
+            return historyStore.hasClearableItems
+        }
+        return true
     }
 
     @objc private func openAccessibilityPermission() {

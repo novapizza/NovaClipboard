@@ -11,11 +11,14 @@ final class PasteEngine {
     /// the user's clipboard isn't visibly hijacked. Spec §3.3.
     static let restoreDelay: TimeInterval = 0.5
 
-    func paste(item: ClipboardItem, toApp app: NSRunningApplication?) {
-        logger.info("paste() called for item type=\(item.type.rawValue, privacy: .public), targetApp=\(app?.bundleIdentifier ?? "nil", privacy: .public)")
+    /// - Parameter restoreClipboard: when true, the pre-paste pasteboard is restored
+    ///   after `restoreDelay`. When false, the pasted item stays on the clipboard so a
+    ///   follow-up ⌘V pastes the same item again (Spec §3.3 step 5 is optional).
+    func paste(item: ClipboardItem, toApp app: NSRunningApplication?, restoreClipboard: Bool) {
+        logger.info("paste() called for item type=\(item.type.rawValue, privacy: .public), targetApp=\(app?.bundleIdentifier ?? "nil", privacy: .public), restore=\(restoreClipboard, privacy: .public)")
 
         let pasteboard = NSPasteboard.general
-        let snapshot = PasteboardSnapshot(capturing: pasteboard)
+        let snapshot = restoreClipboard ? PasteboardSnapshot(capturing: pasteboard) : nil
         pasteboard.clearContents()
 
         switch item.type {
@@ -73,6 +76,7 @@ final class PasteEngine {
             logger.info("paste() posting Cmd+V")
             self.simulateCommandV()
 
+            guard let snapshot else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + PasteEngine.restoreDelay) {
                 logger.info("paste() restoring original pasteboard contents")
                 snapshot.restore(to: pasteboard)

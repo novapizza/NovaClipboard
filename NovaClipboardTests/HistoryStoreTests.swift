@@ -102,4 +102,26 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertGreaterThan(touched.createdAt, firstDate)
     }
 
+    func testIsEmptyAndHasClearableItems() {
+        XCTAssertTrue(store.isEmpty)
+        XCTAssertFalse(store.hasClearableItems)
+
+        let pinned = store.insert(ClipboardItem.text("pinned item"))
+        store.togglePin(pinned)
+        XCTAssertFalse(store.isEmpty)
+        XCTAssertFalse(store.hasClearableItems)
+
+        let unpinned = store.insert(ClipboardItem.text("unpinned item"))
+        XCTAssertFalse(store.isEmpty)
+        XCTAssertTrue(store.hasClearableItems)
+
+        store.delete(unpinned)
+        XCTAssertFalse(store.isEmpty)
+        XCTAssertFalse(store.hasClearableItems)
+
+        store.delete(pinned)
+        XCTAssertTrue(store.isEmpty)
+        XCTAssertFalse(store.hasClearableItems)
+    }
+
 }
