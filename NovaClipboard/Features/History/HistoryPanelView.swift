@@ -243,6 +243,7 @@ struct HistoryPanelView: View {
             )
         }
         .buttonStyle(.plain)
+        .onDrag { item.dragItemProvider() }
         .id(item.persistentModelID)
         .onHover { hovering in
             // Only flag real changes: re-hovering the selected row fires no
