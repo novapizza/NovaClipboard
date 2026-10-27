@@ -17,6 +17,14 @@ struct HistoryPanelView: View {
     /// row under the cursor and chain into runaway auto-scroll.
     @State private var selectionFromHover: Bool = false
     @State private var showClearAllConfirm: Bool = false
+    /// Row currently under the mouse; the drag source only starts drags from a row.
+    @State private var hoveredID: PersistentIdentifier?
+    /// True while a row is held down or being dragged; swaps the shortcut chips for a drag hint.
+    @State private var isHoldingRow: Bool = false
+    /// Rows picked with ⇧-click / ⇧↑↓, in the order they were picked (= paste order).
+    @State private var multiSelection: [PersistentIdentifier] = []
+    /// ⇧ held on its own: the status bar explains multi-select.
+    @State private var isShiftDown: Bool = false
 
     @ObservedObject private var settings = AppSettings.shared
 
@@ -27,16 +35,20 @@ struct HistoryPanelView: View {
     }
 
     let store: HistoryStore
-    let onPaste: (ClipboardItem) -> Void
+    let onPaste: ([ClipboardItem]) -> Void
     let onDismiss: () -> Void
+    let onTogglePreview: (ClipboardItem) -> Void
+    let onSelectionChanged: (ClipboardItem?) -> Void
     @ObservedObject var presentation: PanelPresentation
     let onOpenSettings: () -> Void
     let onOpenAccessibility: () -> Void
 
     init(
         store: HistoryStore,
-        onPaste: @escaping (ClipboardItem) -> Void,
+        onPaste: @escaping ([ClipboardItem]) -> Void,
         onDismiss: @escaping () -> Void,
+        onTogglePreview: @escaping (ClipboardItem) -> Void,
+        onSelectionChanged: @escaping (ClipboardItem?) -> Void,
         presentation: PanelPresentation,
         onOpenSettings: @escaping () -> Void,
         onOpenAccessibility: @escaping () -> Void
@@ -44,6 +56,8 @@ struct HistoryPanelView: View {
         self.store = store
         self.onPaste = onPaste
         self.onDismiss = onDismiss
+        self.onTogglePreview = onTogglePreview
+        self.onSelectionChanged = onSelectionChanged
         self.presentation = presentation
         self.onOpenSettings = onOpenSettings
         self.onOpenAccessibility = onOpenAccessibility
@@ -88,8 +102,17 @@ struct HistoryPanelView: View {
         }
         .frame(width: 380, height: 480)
         .background(KeyHandlerView(actions: keyActions))
+        .background(RowDragSource(itemsToDrag: itemsToDrag, onHoldChange: { holding in
+            withAnimation(.easeInOut(duration: 0.15)) { isHoldingRow = holding }
+        }))
         .onAppear { ensureSelection() }
         .onChange(of: visibleIDs) { _, _ in ensureSelection() }
+        // The view outlives each show, so a selection left over from a dismissed panel
+        // must not come back next time.
+        .onChange(of: presentation.showCount) { _, _ in
+            multiSelection = []
+            isShiftDown = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask) == .shift
+        }
     }
 
     private var panelBackground: some View {
@@ -213,6 +236,9 @@ struct HistoryPanelView: View {
                     selectionFromHover = false
                     return
                 }
+                // Hover changes are skipped too: sweeping the mouse toward the
+                // preview window shouldn't swap what it shows.
+                onSelectionChanged(currentItem())
                 guard let newValue else { return }
                 withAnimation(.linear(duration: 0.08)) {
                     proxy.scrollTo(newValue, anchor: .center)
@@ -222,9 +248,70 @@ struct HistoryPanelView: View {
     }
 
     private var statusBar: some View {
+        // Both layers stay in the layout and only cross-fade, so the bar keeps the
+        // chips' size and nothing jumps when the hint appears.
+        ZStack {
+            shortcutChips
+                .opacity(statusMode == .shortcuts ? 1 : 0)
+                .accessibilityHidden(statusMode != .shortcuts)
+            multiSelectHint
+                .opacity(statusMode == .multiSelect ? 1 : 0)
+                .accessibilityHidden(statusMode != .multiSelect)
+            dragHint
+                .opacity(statusMode == .drag ? 1 : 0)
+                .accessibilityHidden(statusMode != .drag)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .liquidGlass(.regular, in: .capsule)
+        .accessibilityElement(children: .contain)
+    }
+
+    private enum StatusMode { case shortcuts, multiSelect, drag }
+
+    private var statusMode: StatusMode {
+        if isHoldingRow { return .drag }
+        if isShiftDown || !multiSelection.isEmpty { return .multiSelect }
+        return .shortcuts
+    }
+
+    private var multiSelectHint: some View {
+        HStack(spacing: 10) {
+            if multiSelection.isEmpty {
+                Image(systemName: "checklist")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("Click items to select multiple")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("\(multiSelection.count) selected")
+                    .font(.caption2.weight(.semibold))
+                shortcutChip("⇧", "Add")
+                shortcutChip("↵", "Paste all")
+                shortcutChip("esc", "Deselect")
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var dragHint: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "hand.draw")
+                .font(.caption.weight(.semibold))
+            Text("Drag and drop where you want to paste")
+                .font(.caption2)
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(.secondary)
+    }
+
+    private var shortcutChips: some View {
         HStack(spacing: 10) {
             shortcutChip("↑↓", "Select")
             shortcutChip("↵", "Paste")
+            shortcutChip("␣", "Preview")
             shortcutChip("⌘P", "Pin")
             shortcutChip("⌫", "Delete")
             Spacer()
@@ -236,10 +323,6 @@ struct HistoryPanelView: View {
                 .liquidGlass(.regular, in: .capsule)
                 .accessibilityLabel("\(visibleItems.count) items")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .liquidGlass(.regular, in: .capsule)
-        .accessibilityElement(children: .contain)
     }
 
     private func shortcutChip(_ key: String, _ label: LocalizedStringKey) -> some View {
@@ -269,11 +352,12 @@ struct HistoryPanelView: View {
         // nested pin/delete buttons take unambiguous priority on their hit-test
         // rects — SwiftUI's gesture arbitration favors the inner Button.
         Button {
-            onPaste(item)
+            rowClicked(item)
         } label: {
             HistoryItemRow(
                 item: item,
                 isSelected: item.persistentModelID == selectedID,
+                multiSelectIndex: multiSelection.firstIndex(of: item.persistentModelID),
                 quickPasteIndex: quickIdx,
                 quickPasteSymbols: quickPasteSymbols,
                 onTogglePin: { store.togglePin(item) },
@@ -281,9 +365,13 @@ struct HistoryPanelView: View {
             )
         }
         .buttonStyle(.plain)
-        .onDrag { item.dragItemProvider() }
         .id(item.persistentModelID)
         .onHover { hovering in
+            if hovering {
+                hoveredID = item.persistentModelID
+            } else if hoveredID == item.persistentModelID {
+                hoveredID = nil
+            }
             // Only flag real changes: re-hovering the selected row fires no
             // `onChange`, so a stale flag would swallow the next keyboard scroll.
             if hovering && selectedID != item.persistentModelID {
@@ -309,6 +397,65 @@ struct HistoryPanelView: View {
         if selectedID == nil || !visibleItems.contains(where: { $0.persistentModelID == selectedID }) {
             selectedID = visibleItems.first?.persistentModelID
         }
+        let visible = Set(visibleIDs)
+        multiSelection.removeAll { !visible.contains($0) }
+    }
+
+    // MARK: - Multi-select
+
+    /// ⇧-click toggles a row in the multi-selection. Without ⇧, clicking a picked row
+    /// pastes the whole selection and clicking any other row clears it.
+    private func rowClicked(_ item: ClipboardItem) {
+        let id = item.persistentModelID
+        if NSEvent.modifierFlags.contains(.shift) {
+            toggleMultiSelection(id)
+        } else if multiSelection.isEmpty {
+            onPaste([item])
+        } else if multiSelection.contains(id) {
+            pasteMultiSelection()
+        } else {
+            multiSelection = []
+        }
+    }
+
+    private func toggleMultiSelection(_ id: PersistentIdentifier) {
+        if let idx = multiSelection.firstIndex(of: id) {
+            multiSelection.remove(at: idx)
+        } else {
+            multiSelection.append(id)
+        }
+    }
+
+    /// ⇧↑/⇧↓: picks the current row (if not yet) and the one moved onto.
+    private func extendSelection(by delta: Int) {
+        if let selectedID, !multiSelection.contains(selectedID) {
+            multiSelection.append(selectedID)
+        }
+        moveSelection(by: delta)
+        if let selectedID, !multiSelection.contains(selectedID) {
+            multiSelection.append(selectedID)
+        }
+    }
+
+    private func multiSelectedItems() -> [ClipboardItem] {
+        let byID = Dictionary(visibleItems.map { ($0.persistentModelID, $0) }, uniquingKeysWith: { a, _ in a })
+        return multiSelection.compactMap { byID[$0] }
+    }
+
+    private func pasteMultiSelection() {
+        let items = multiSelectedItems()
+        multiSelection = []
+        guard !items.isEmpty else { return }
+        onPaste(items)
+    }
+
+    /// Dragging a picked row drags the whole selection; any other row drags alone.
+    private func itemsToDrag() -> [ClipboardItem] {
+        guard let hovered = hoveredItem() else { return [] }
+        if multiSelection.contains(hovered.persistentModelID) {
+            return multiSelectedItems()
+        }
+        return [hovered]
     }
 
     // MARK: - Key actions
@@ -317,10 +464,14 @@ struct HistoryPanelView: View {
         KeyActions(
             onMoveUp: { moveSelection(by: -1) },
             onMoveDown: { moveSelection(by: 1) },
+            onExtendUp: { extendSelection(by: -1) },
+            onExtendDown: { extendSelection(by: 1) },
             onConfirm: confirmSelection,
-            onCancel: onDismiss,
+            onCancel: cancel,
+            onShiftChange: { isShiftDown = $0 },
             onTogglePin: togglePinSelected,
             onDelete: deleteSelected,
+            onPreview: previewSelected,
             onQuickPaste: quickPaste
         )
     }
@@ -334,15 +485,28 @@ struct HistoryPanelView: View {
     }
 
     private func confirmSelection() {
+        if !multiSelection.isEmpty {
+            pasteMultiSelection()
+            return
+        }
         guard let item = currentItem() else { return }
-        onPaste(item)
+        onPaste([item])
+    }
+
+    /// Esc clears a multi-selection before it dismisses the panel.
+    private func cancel() {
+        if multiSelection.isEmpty {
+            onDismiss()
+        } else {
+            multiSelection = []
+        }
     }
 
     private func quickPaste(index: Int) {
         // index is 0..8 (⌘1..⌘9). Maps to the visible row in order (pinned first, then recent).
         let items = visibleItems
         guard index < items.count else { return }
-        onPaste(items[index])
+        onPaste([items[index]])
     }
 
     private func togglePinSelected() {
@@ -350,9 +514,19 @@ struct HistoryPanelView: View {
         store.togglePin(item)
     }
 
+    private func previewSelected() {
+        guard let item = currentItem() else { return }
+        onTogglePreview(item)
+    }
+
     private func deleteSelected() {
         guard let item = currentItem() else { return }
         store.delete(item)
+    }
+
+    private func hoveredItem() -> ClipboardItem? {
+        guard let hoveredID else { return nil }
+        return visibleItems.first(where: { $0.persistentModelID == hoveredID })
     }
 
     private func currentItem() -> ClipboardItem? {
@@ -361,15 +535,137 @@ struct HistoryPanelView: View {
     }
 }
 
+// MARK: - Drag source
+
+/// Starts an AppKit dragging session when a row is dragged, writing concrete pasteboard
+/// data (see `ClipboardItem.draggingItems()`). A local mouse monitor is used instead of an
+/// overlay view so row clicks and the pin/delete buttons keep their normal hit-testing.
+private struct RowDragSource: NSViewRepresentable {
+    var itemsToDrag: () -> [ClipboardItem]
+    var onHoldChange: (Bool) -> Void
+
+    func makeNSView(context: Context) -> RowDragSourceView {
+        let view = RowDragSourceView()
+        view.itemsToDrag = itemsToDrag
+        view.onHoldChange = onHoldChange
+        return view
+    }
+
+    func updateNSView(_ nsView: RowDragSourceView, context: Context) {
+        nsView.itemsToDrag = itemsToDrag
+        nsView.onHoldChange = onHoldChange
+    }
+}
+
+private final class RowDragSourceView: NSView, NSDraggingSource {
+    var itemsToDrag: (() -> [ClipboardItem])?
+    var onHoldChange: ((Bool) -> Void)?
+
+    private static let dragThreshold: CGFloat = 4
+    /// A press shorter than this is a click (paste), so the hint doesn't flash on every click.
+    private static let holdDelay: TimeInterval = 0.3
+
+    private var holdTimer: Timer?
+    private var isHolding = false {
+        didSet { if isHolding != oldValue { onHoldChange?(isHolding) } }
+    }
+
+    private var monitor: Any?
+    private var mouseDownEvent: NSEvent?
+    private var pendingItems: [ClipboardItem] = []
+    private var operationMask: NSDragOperation = .copy
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
+        }
+        guard window != nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]) { [weak self] event in
+            guard let self, event.window === self.window else { return event }
+            return self.handle(event)
+        }
+    }
+
+    private func handle(_ event: NSEvent) -> NSEvent? {
+        switch event.type {
+        case .leftMouseDown:
+            pendingItems = itemsToDrag?() ?? []
+            mouseDownEvent = pendingItems.isEmpty ? nil : event
+            if !pendingItems.isEmpty {
+                holdTimer?.invalidate()
+                holdTimer = Timer.scheduledTimer(withTimeInterval: Self.holdDelay, repeats: false) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.isHolding = true }
+                }
+            }
+        case .leftMouseDragged:
+            guard let down = mouseDownEvent, !pendingItems.isEmpty else { return event }
+            let dx = event.locationInWindow.x - down.locationInWindow.x
+            let dy = event.locationInWindow.y - down.locationInWindow.y
+            guard hypot(dx, dy) >= Self.dragThreshold else { return event }
+            let dragged = pendingItems
+            mouseDownEvent = nil
+            pendingItems = []
+            let items = ClipboardItem.draggingItems(for: dragged)
+            guard !items.isEmpty else { endHold(); return event }
+            holdTimer?.invalidate()
+            isHolding = true
+            let origin = convert(down.locationInWindow, from: nil)
+            for (offset, draggingItem) in items.enumerated() {
+                let size = draggingItem.draggingFrame.size
+                let step = CGFloat(offset) * 6
+                draggingItem.draggingFrame = NSRect(
+                    x: origin.x - size.width / 2 + step,
+                    y: origin.y - size.height / 2 - step,
+                    width: size.width,
+                    height: size.height
+                )
+            }
+            operationMask = ClipboardItem.dragOperationMask(for: dragged)
+            beginDraggingSession(with: items, event: down, source: self)
+            // Swallow the event so the window doesn't also start a background move.
+            return nil
+        case .leftMouseUp:
+            mouseDownEvent = nil
+            pendingItems = []
+            endHold()
+        default:
+            break
+        }
+        return event
+    }
+
+    private func endHold() {
+        holdTimer?.invalidate()
+        holdTimer = nil
+        isHolding = false
+    }
+
+    // The session's own loop swallows the mouse-up, so the hint is cleared here.
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        endHold()
+    }
+
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        context == .outsideApplication ? operationMask : []
+    }
+}
+
 // MARK: - Key handler
 
 struct KeyActions {
     var onMoveUp: () -> Void
     var onMoveDown: () -> Void
+    var onExtendUp: () -> Void
+    var onExtendDown: () -> Void
     var onConfirm: () -> Void
     var onCancel: () -> Void
+    /// True when ⇧ is the only modifier held.
+    var onShiftChange: (Bool) -> Void
     var onTogglePin: () -> Void
     var onDelete: () -> Void
+    var onPreview: () -> Void
     var onQuickPaste: (Int) -> Void
 }
 
@@ -422,15 +718,23 @@ private final class KeyCaptureView: NSView {
             return
         }
 
+        let shift = mods == .shift
         switch Int(event.keyCode) {
-        case 126: actions.onMoveUp()
-        case 125: actions.onMoveDown()
+        case 126: shift ? actions.onExtendUp() : actions.onMoveUp()
+        case 125: shift ? actions.onExtendDown() : actions.onMoveDown()
         case 36, 76: actions.onConfirm()
         case 53: actions.onCancel()
+        case 49 where mods.isEmpty: actions.onPreview() // space
         case 51: // delete/backspace
             actions.onDelete()
         default: super.keyDown(with: event)
         }
+    }
+
+    override func flagsChanged(with event: NSEvent) {
+        let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        actions?.onShiftChange(mods == .shift)
+        super.flagsChanged(with: event)
     }
 
     /// Maps a top-row number key's virtual keycode to its digit (1–9), layout-independent

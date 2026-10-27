@@ -15,54 +15,28 @@ final class PasteEngine {
     ///   after `restoreDelay`. When false, the pasted item stays on the clipboard so a
     ///   follow-up ⌘V pastes the same item again (Spec §3.3 step 5 is optional).
     func paste(item: ClipboardItem, toApp app: NSRunningApplication?, restoreClipboard: Bool) {
-        logger.info("paste() called for item type=\(item.type.rawValue, privacy: .public), targetApp=\(app?.bundleIdentifier ?? "nil", privacy: .public), restore=\(restoreClipboard, privacy: .public)")
+        paste(items: [item], toApp: app, restoreClipboard: restoreClipboard)
+    }
+
+    /// Pastes several items with a single ⌘V: text/links are joined with newlines and
+    /// images/files go up as file URLs (see `ClipboardItem.combinedPasteboardItems`).
+    func paste(items: [ClipboardItem], toApp app: NSRunningApplication?, restoreClipboard: Bool) {
+        guard !items.isEmpty else { return }
+        logger.info("paste() called for \(items.count, privacy: .public) item(s), first type=\(items[0].type.rawValue, privacy: .public), targetApp=\(app?.bundleIdentifier ?? "nil", privacy: .public), restore=\(restoreClipboard, privacy: .public)")
 
         let pasteboard = NSPasteboard.general
         let snapshot = restoreClipboard ? PasteboardSnapshot(capturing: pasteboard) : nil
         pasteboard.clearContents()
 
-        switch item.type {
-        case .text, .richText, .link:
-            guard let content = item.contentText else {
-                logger.error("paste() aborted: contentText nil for text/link item")
+        if items.count > 1 {
+            let combined = ClipboardItem.combinedPasteboardItems(items)
+            guard !combined.isEmpty else {
+                logger.error("paste() aborted: no content in selected items")
                 return
             }
-            pasteboard.setString(content, forType: .string)
-
-        case .image:
-            // ClipboardMonitor + screenshot ingestion normalize image bytes to PNG before storage,
-            // so write the stored bytes verbatim — re-encoding through TIFF wastes CPU and can be
-            // lossy for some PNG color profiles.
-            let pngData: Data?
-            if let blob = item.imageBlob {
-                pngData = blob
-            } else if let path = item.imagePath {
-                pngData = try? Data(contentsOf: URL(fileURLWithPath: path))
-            } else {
-                pngData = nil
-            }
-            guard let pngData else {
-                logger.error("paste() aborted: image data missing")
-                return
-            }
-            let pngType = NSPasteboard.PasteboardType("public.png")
-            pasteboard.setData(pngData, forType: pngType)
-            // Derive TIFF as a fallback for legacy apps that only accept it.
-            if let rep = NSBitmapImageRep(data: pngData),
-               let tiff = rep.tiffRepresentation {
-                let tiffType = NSPasteboard.PasteboardType("public.tiff")
-                pasteboard.setData(tiff, forType: tiffType)
-            }
-
-        case .file:
-            guard let strings = item.fileURLs, !strings.isEmpty else {
-                logger.error("paste() aborted: file URLs empty")
-                return
-            }
-            let urls = strings.compactMap { URL(string: $0) }
-            if !urls.isEmpty {
-                pasteboard.writeObjects(urls as [NSURL])
-            }
+            pasteboard.writeObjects(combined)
+        } else {
+            guard write(items[0], to: pasteboard) else { return }
         }
 
         guard ensureAccessibilityTrusted() else {
@@ -82,6 +56,55 @@ final class PasteEngine {
                 snapshot.restore(to: pasteboard)
             }
         }
+    }
+
+    /// Writes a single item's payload. Returns false when the item has no usable content.
+    private func write(_ item: ClipboardItem, to pasteboard: NSPasteboard) -> Bool {
+
+        switch item.type {
+        case .text, .richText, .link:
+            guard let content = item.contentText else {
+                logger.error("paste() aborted: contentText nil for text/link item")
+                return false
+            }
+            pasteboard.setString(content, forType: .string)
+
+        case .image:
+            // ClipboardMonitor + screenshot ingestion normalize image bytes to PNG before storage,
+            // so write the stored bytes verbatim — re-encoding through TIFF wastes CPU and can be
+            // lossy for some PNG color profiles.
+            let pngData: Data?
+            if let blob = item.imageBlob {
+                pngData = blob
+            } else if let path = item.imagePath {
+                pngData = try? Data(contentsOf: URL(fileURLWithPath: path))
+            } else {
+                pngData = nil
+            }
+            guard let pngData else {
+                logger.error("paste() aborted: image data missing")
+                return false
+            }
+            let pngType = NSPasteboard.PasteboardType("public.png")
+            pasteboard.setData(pngData, forType: pngType)
+            // Derive TIFF as a fallback for legacy apps that only accept it.
+            if let rep = NSBitmapImageRep(data: pngData),
+               let tiff = rep.tiffRepresentation {
+                let tiffType = NSPasteboard.PasteboardType("public.tiff")
+                pasteboard.setData(tiff, forType: tiffType)
+            }
+
+        case .file:
+            guard let strings = item.fileURLs, !strings.isEmpty else {
+                logger.error("paste() aborted: file URLs empty")
+                return false
+            }
+            let urls = strings.compactMap { URL(string: $0) }
+            if !urls.isEmpty {
+                pasteboard.writeObjects(urls as [NSURL])
+            }
+        }
+        return true
     }
 
     private func activate(app: NSRunningApplication?) {
