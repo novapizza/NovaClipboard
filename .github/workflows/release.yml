@@ -207,15 +207,20 @@ jobs:
           [ -n "$SPARKLE_ED_PRIVATE_KEY" ] || { echo "ERROR: SPARKLE_ED_PRIVATE_KEY empty"; exit 1; }
           [ -n "$DOWNLOAD_URL_PREFIX" ] || { echo "ERROR: SPARKLE_DOWNLOAD_URL_PREFIX empty"; exit 1; }
 
-          # Locate Sparkle tool binaries inside the resolved SPM cache
-          SPARKLE_BIN=$(find "$HOME/Library/Developer/Xcode/DerivedData" \
-            -type d -name "Sparkle-*" -path "*/SourcePackages/artifacts/*" 2>/dev/null \
-            | head -n1)/bin
-          if [ ! -x "$SPARKLE_BIN/generate_appcast" ]; then
-            echo "Sparkle bin not found, falling back to brew install" >&2
-            brew install --cask sparkle 2>/dev/null || true
-            SPARKLE_BIN="/opt/homebrew/Caskroom/sparkle/$(ls /opt/homebrew/Caskroom/sparkle | head -n1)/bin"
-          fi
+          # The SPM artifact ships only the framework, so download the Sparkle
+          # release tools matching the version the archive resolved.
+          RESOLVED=$(find NovaClipboard.xcodeproj "$HOME/Library/Developer/Xcode/DerivedData" \
+            -name Package.resolved 2>/dev/null | head -n1)
+          SPARKLE_VERSION=$(jq -r '.pins[] | select(.identity == "sparkle") | .state.version' "$RESOLVED")
+          [ -n "$SPARKLE_VERSION" ] && [ "$SPARKLE_VERSION" != null ] || {
+            echo "ERROR: Sparkle version not found in '$RESOLVED'"; exit 1;
+          }
+          SPARKLE_DIR="$RUNNER_TEMP/sparkle"
+          mkdir -p "$SPARKLE_DIR"
+          curl -fsSL "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz" \
+            | tar -xJ -C "$SPARKLE_DIR"
+          SPARKLE_BIN="$SPARKLE_DIR/bin"
+          [ -x "$SPARKLE_BIN/generate_appcast" ] || { echo "ERROR: generate_appcast missing"; exit 1; }
 
           APPCAST_DIR="$RUNNER_TEMP/appcast"
           mkdir -p "$APPCAST_DIR"
