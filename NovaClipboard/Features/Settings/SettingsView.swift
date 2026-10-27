@@ -7,16 +7,11 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.14),
-                    Color.purple.opacity(0.08),
-                    Color.blue.opacity(0.10)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Rectangle().fill(.ultraThinMaterial)
+            LiquidGlassBackdrop(colors: [
+                Color.accentColor.opacity(0.14),
+                Color.purple.opacity(0.08),
+                Color.blue.opacity(0.10)
+            ])
 
             TabView {
                 GeneralTab(settings: settings)
@@ -78,6 +73,9 @@ private struct GeneralTab: View {
             if settings.quickPasteEnabled {
                 QuickPasteHotKeyPicker(modifiers: $settings.quickPasteModifiers)
             }
+
+            Toggle("Restore previous clipboard after paste", isOn: $settings.restoreClipboardAfterPaste)
+                .help("When off, the pasted item stays on the clipboard so ⌘V pastes it again. When on, your previous clipboard comes back right after pasting.")
 
             Picker("Panel position", selection: $settings.panelPosition) {
                 Text("At caret").tag(PanelPositionPreference.atCaret)

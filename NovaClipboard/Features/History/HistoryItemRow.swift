@@ -22,7 +22,7 @@ struct HistoryItemRow: View {
         HStack(alignment: .center, spacing: 10) {
             leadingVisual
                 .frame(width: 36, height: 36)
-                .liquidGlass(.regular, in: .roundedRect(cornerRadius: 9))
+                .liquidGlassContent(.regular, in: .roundedRect(cornerRadius: 9))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.preview)
@@ -46,7 +46,7 @@ struct HistoryItemRow: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .liquidGlass(.regular, in: .capsule)
+                    .liquidGlassContent(.regular, in: .capsule)
             }
         }
         .padding(.vertical, 7)
@@ -55,7 +55,7 @@ struct HistoryItemRow: View {
             if isSelected {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(.clear)
-                    .liquidGlass(.tinted(.accentColor), in: .roundedRect(cornerRadius: 12))
+                    .liquidGlassContent(.tinted(.accentColor), in: .roundedRect(cornerRadius: 12))
             } else if isHovered {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color.primary.opacity(0.05))
@@ -84,7 +84,7 @@ struct HistoryItemRow: View {
             .buttonStyle(.plain)
             .background {
                 if item.isPinned || isHovered {
-                    Circle().fill(.clear).liquidGlass(.regular, in: .circle)
+                    Circle().fill(.clear).liquidGlassContent(.regular, in: .circle)
                 }
             }
             .opacity(shouldShow ? 1 : 0)
@@ -107,7 +107,7 @@ struct HistoryItemRow: View {
             .buttonStyle(.plain)
             .background {
                 if isHovered {
-                    Circle().fill(.clear).liquidGlass(.regular, in: .circle)
+                    Circle().fill(.clear).liquidGlassContent(.regular, in: .circle)
                 }
             }
             .opacity(shouldShow ? 1 : 0)

@@ -61,26 +61,26 @@ Dedup is by SHA-256 over the content (text string, file-URL list joined by `\n`,
 
 ### Paste flow
 
-`PasteEngine.paste(item:toApp:)` is the load-bearing path and the trickiest piece to modify:
+`PasteEngine.paste(item:toApp:restoreClipboard:)` is the load-bearing path and the trickiest piece to modify:
 
-1. **Snapshot** the current pasteboard via `PasteboardSnapshot` (captures every `NSPasteboardItem` with all declared types).
+1. **Snapshot** the current pasteboard via `PasteboardSnapshot` (captures every `NSPasteboardItem` with all declared types) — only when `restoreClipboard` is true.
 2. Clear and rewrite the pasteboard with the history item's payload (text/image/file URLs).
 3. Require `AXIsProcessTrusted()` — if missing, raise the Accessibility alert and abort.
 4. Activate the target app (`PanelController.frontmostAppBeforeShow`, captured at `show()` before the panel stole focus).
 5. After 80 ms, synthesize ⌘V via `CGEvent` on `.cghidEventTap`.
-6. After `PasteEngine.restoreDelay` (500 ms), restore the original pasteboard snapshot.
+6. If restoring, after `PasteEngine.restoreDelay` (500 ms), restore the original pasteboard snapshot.
 
-The restore is what lets users keep their in-progress copy. If you change the timing or skip the snapshot you will break that contract — see Spec §3.3 in `.docs/spec.md`.
+`restoreClipboard` comes from `settings.restoreClipboardAfterPaste`, which is **off by default**: the pasted item stays on the clipboard so a second ⌘V elsewhere pastes the same item (what users of other clipboard managers expect). When the user turns it on, the restore lets them keep their in-progress copy — if you change the timing or skip the snapshot in that mode you break that contract. See Spec §3.3 in `.docs/spec.md` (step 5 is optional).
 
 ### Panel & hotkey
 
-`HotKeyManager` registers a Carbon hotkey from `settings.hotKey` (`KeyCombo`). The handler calls `PanelController.toggle()`. `PanelController` builds an `NSPanel`, captures `NSWorkspace.shared.frontmostApplication` **before** showing (so paste can restore focus), and uses `PanelAnchorResolver` to position the panel at the caret (via AX APIs), mouse, or a fixed origin per `settings.panelPosition`. The panel hosts a SwiftUI `HistoryPanelView` through `NSHostingController`.
+`HotKeyManager` registers a Carbon hotkey from `settings.hotKey` (`KeyCombo`). The handler calls `PanelController.toggle()`. A **left click** on the menu-bar icon calls `toggle(source: .statusItem(rect))` instead: the panel anchors under the icon and `PanelPresentation.openedFromStatusItem` adds a Settings icon button to the header (next to Clear). A **right/Control click** shows the classic `NSMenu` (`statusMenu`, attached only for that click). Because clicking the icon makes the open panel resign key and hide first, `toggle` ignores status-item clicks within `reopenSuppressInterval` of a hide. Rows can also be dragged out (`ClipboardItem.dragItemProvider()`); drags use their own pasteboard and don't touch history. `PanelController` builds an `NSPanel`, captures `NSWorkspace.shared.frontmostApplication` **before** showing (so paste can restore focus), and uses `PanelAnchorResolver` to position the panel at the caret (via AX APIs), mouse, or a fixed origin per `settings.panelPosition`. The panel hosts a SwiftUI `HistoryPanelView` through `NSHostingController`.
 
 `HotKeyManager` also owns the **quick-paste** slots: digit keys 1–9 (`registerQuickPaste`) share a single Carbon event handler with the panel hotkey, dispatched by `EventHotKeyID.id` (panel is id `1`; quick-paste slots are `quickPasteBaseID + digit`). Quick-paste bypasses the panel entirely — `AppDelegate.quickPaste(index:)` fetches the Nth most-recent item and calls `pasteEngine.paste` directly against the frontmost app. Toggled by `settings.quickPasteEnabled` with a configurable modifier mask (`settings.quickPasteModifiers`, default ⌘⇧); both flow through `applyQuickPasteHotKeys()` via the settings bindings, not direct calls.
 
 ### Permissions
 
-Accessibility is required for both ⌘V synthesis and caret detection. `AppDelegate.startPermissionMonitor` polls `AXIsProcessTrusted()` every 3 s and swaps the status-item SF Symbol (`doc.on.clipboard` ↔ `exclamationmark.triangle`). The onboarding window auto-shows only on the genuine first launch (`!settings.hasOnboarded`); a later revocation is surfaced by the warning icon and the conditional "Accessibility Permission…" menu item.
+Accessibility is required for both ⌘V synthesis and caret detection. `AppDelegate.startPermissionMonitor` polls `AXIsProcessTrusted()` every 3 s and swaps the status-item SF Symbol (`doc.on.clipboard` ↔ `exclamationmark.triangle`). The onboarding window auto-shows only on the genuine first launch (`!settings.hasOnboarded`); a later revocation is surfaced by the warning icon, the conditional "Accessibility Permission" menu item, and an orange banner at the top of the history panel (`PanelPresentation.isAccessibilityTrusted`, refreshed on each `show` and by the same poll) that opens the same onboarding window.
 
 Launch-at-login uses `SMAppService` via `Utilities/LaunchAtLogin.swift`; on first run the OS-level state is synced to match the in-app toggle so the UI cannot lie.
 

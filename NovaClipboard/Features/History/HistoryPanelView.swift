@@ -12,6 +12,10 @@ struct HistoryPanelView: View {
     @Query private var recentItems: [ClipboardItem]
 
     @State private var selectedID: PersistentIdentifier?
+    /// Set when the pending `selectedID` change came from mouse hover. The hovered
+    /// row is already on screen, so scrolling it to center would only slide a new
+    /// row under the cursor and chain into runaway auto-scroll.
+    @State private var selectionFromHover: Bool = false
     @State private var showClearAllConfirm: Bool = false
 
     @ObservedObject private var settings = AppSettings.shared
@@ -25,15 +29,24 @@ struct HistoryPanelView: View {
     let store: HistoryStore
     let onPaste: (ClipboardItem) -> Void
     let onDismiss: () -> Void
+    @ObservedObject var presentation: PanelPresentation
+    let onOpenSettings: () -> Void
+    let onOpenAccessibility: () -> Void
 
     init(
         store: HistoryStore,
         onPaste: @escaping (ClipboardItem) -> Void,
-        onDismiss: @escaping () -> Void
+        onDismiss: @escaping () -> Void,
+        presentation: PanelPresentation,
+        onOpenSettings: @escaping () -> Void,
+        onOpenAccessibility: @escaping () -> Void
     ) {
         self.store = store
         self.onPaste = onPaste
         self.onDismiss = onDismiss
+        self.presentation = presentation
+        self.onOpenSettings = onOpenSettings
+        self.onOpenAccessibility = onOpenAccessibility
 
         let pinnedDescriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate { $0.isPinned },
@@ -57,6 +70,10 @@ struct HistoryPanelView: View {
             VStack(spacing: 10) {
                 headerBar
 
+                if !presentation.isAccessibilityTrusted {
+                    accessibilityBanner
+                }
+
                 if visibleItems.isEmpty {
                     emptyState
                 } else {
@@ -76,21 +93,11 @@ struct HistoryPanelView: View {
     }
 
     private var panelBackground: some View {
-        ZStack {
-            // Soft tinted gradient backdrop so Liquid Glass has something
-            // colorful to refract. On macOS 14/15 this is still the visual
-            // floor under the .ultraThinMaterial fallback.
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.18),
-                    Color.purple.opacity(0.10),
-                    Color.blue.opacity(0.12)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Rectangle().fill(.ultraThinMaterial)
-        }
+        LiquidGlassBackdrop(colors: [
+            Color.accentColor.opacity(0.18),
+            Color.purple.opacity(0.10),
+            Color.blue.opacity(0.12)
+        ])
     }
 
     private var headerBar: some View {
@@ -101,13 +108,24 @@ struct HistoryPanelView: View {
             Button {
                 showClearAllConfirm = true
             } label: {
-                Label("Clear", systemImage: "trash")
-                    .labelStyle(.titleAndIcon)
+                Label("Clear All", systemImage: "trash")
+                    .labelStyle(.iconOnly)
                     .font(.caption.weight(.medium))
             }
             .buttonStyle(.liquidGlass())
-            .disabled(visibleItems.isEmpty)
-            .opacity(visibleItems.isEmpty ? 0.5 : 1)
+            .help("Clear All")
+            .disabled(recentItems.isEmpty)
+            .opacity(recentItems.isEmpty ? 0.5 : 1)
+            // Settings stands in for the status-item menu that a left click no longer opens.
+            if presentation.openedFromStatusItem {
+                Button(action: onOpenSettings) {
+                    Label("Settings", systemImage: "gearshape")
+                        .labelStyle(.iconOnly)
+                        .font(.caption.weight(.medium))
+                }
+                .buttonStyle(.liquidGlass())
+                .help("Settings")
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -124,13 +142,44 @@ struct HistoryPanelView: View {
         }
     }
 
+    /// Without Accessibility, ⌘V synthesis silently fails, so warn before the user picks an
+    /// item. Clicking does the same as the "Accessibility Permission" menu item.
+    private var accessibilityBanner: some View {
+        Button(action: onOpenAccessibility) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.body)
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Accessibility permission required")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Pasting won't work until access is granted. Click to fix.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+            .liquidGlassContent(.tinted(.orange), in: .roundedRect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .help("Accessibility Permission")
+        .accessibilityLabel("Accessibility permission required. Open setup.")
+    }
+
     private var emptyState: some View {
         VStack(spacing: 6) {
             Image(systemName: "doc.on.clipboard")
                 .font(.system(size: 28, weight: .light))
                 .foregroundStyle(.secondary)
                 .padding(14)
-                .liquidGlass(.regular, in: .circle)
+                .liquidGlassContent(.regular, in: .circle)
                 .padding(.bottom, 4)
             Text("Nothing here")
                 .font(.headline)
@@ -160,6 +209,10 @@ struct HistoryPanelView: View {
                 .padding(.vertical, 4)
             }
             .onChange(of: selectedID) { _, newValue in
+                if selectionFromHover {
+                    selectionFromHover = false
+                    return
+                }
                 guard let newValue else { return }
                 withAnimation(.linear(duration: 0.08)) {
                     proxy.scrollTo(newValue, anchor: .center)
@@ -228,9 +281,15 @@ struct HistoryPanelView: View {
             )
         }
         .buttonStyle(.plain)
+        .onDrag { item.dragItemProvider() }
         .id(item.persistentModelID)
         .onHover { hovering in
-            if hovering { selectedID = item.persistentModelID }
+            // Only flag real changes: re-hovering the selected row fires no
+            // `onChange`, so a stale flag would swallow the next keyboard scroll.
+            if hovering && selectedID != item.persistentModelID {
+                selectionFromHover = true
+                selectedID = item.persistentModelID
+            }
         }
     }
 

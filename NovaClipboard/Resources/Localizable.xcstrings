@@ -58,6 +58,26 @@
         }
       }
     },
+    "About" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giới thiệu"
+          }
+        }
+      }
+    },
+    "Accessibility Permission" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền Trợ năng"
+          }
+        }
+      }
+    },
     "Accessibility permission granted" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -69,13 +89,22 @@
         }
       }
     },
-    "Accessibility Permission…" : {
-      "extractionState" : "stale",
+    "Accessibility permission required" : {
       "localizations" : {
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quyền Trợ năng…"
+            "value" : "Cần cấp quyền Trợ năng"
+          }
+        }
+      }
+    },
+    "Accessibility permission required. Open setup." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần cấp quyền Trợ năng. Mở phần thiết lập."
           }
         }
       }
@@ -151,6 +180,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tự động lưu ảnh chụp màn hình"
+          }
+        }
+      }
+    },
+    "Check for Updates" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểm tra cập nhật"
           }
         }
       }
@@ -475,6 +514,16 @@
         }
       }
     },
+    "NovaClipboard needs Accessibility permission to paste into the active app.\n\n1. Open System Settings → Privacy & Security → Accessibility\n2. Remove any old NovaClipboard entry, then add this .app\n3. Enable the toggle and relaunch NovaClipboard" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NovaClipboard cần quyền Trợ năng để dán vào ứng dụng đang hoạt động.\n\n1. Mở Cài đặt Hệ thống → Quyền riêng tư & Bảo mật → Trợ năng\n2. Xóa mục NovaClipboard cũ (nếu có), rồi thêm ứng dụng .app này\n3. Bật công tắc và mở lại NovaClipboard"
+          }
+        }
+      }
+    },
     "NovaClipboard needs to restart to change the language." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -548,6 +597,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dán trực tiếp mục gần đây thứ N (vị trí 1 = mới nhất) mà không cần mở bảng."
+          }
+        }
+      }
+    },
+    "Pasting won't work until access is granted. Click to fix." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể dán cho đến khi được cấp quyền. Bấm để khắc phục."
           }
         }
       }
@@ -683,17 +742,6 @@
         }
       }
     },
-    "Quit NovaClipboard" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thoát NovaClipboard"
-          }
-        }
-      }
-    },
     "Recent" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -723,6 +771,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cần khởi động lại"
+          }
+        }
+      }
+    },
+    "Restore previous clipboard after paste" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khôi phục clipboard trước đó sau khi dán"
           }
         }
       }
@@ -771,6 +829,16 @@
         }
       }
     },
+    "Select" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn"
+          }
+        }
+      }
+    },
     "Send feedback" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -782,13 +850,12 @@
         }
       }
     },
-    "Settings…" : {
-      "extractionState" : "stale",
+    "Settings" : {
       "localizations" : {
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cài đặt…"
+            "value" : "Cài đặt"
           }
         }
       }
@@ -906,6 +973,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chào mừng đến với NovaClipboard"
+          }
+        }
+      }
+    },
+    "When off, the pasted item stays on the clipboard so ⌘V pastes it again. When on, your previous clipboard comes back right after pasting." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khi tắt, mục vừa dán vẫn nằm trong clipboard để ⌘V dán lại. Khi bật, clipboard trước đó được khôi phục ngay sau khi dán."
           }
         }
       }
