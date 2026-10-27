@@ -17,6 +17,9 @@ enum PanelSource {
 @MainActor
 final class PanelPresentation: ObservableObject {
     @Published var openedFromStatusItem: Bool = false
+    /// Drives the "Accessibility permission required" banner. Refreshed on every show and
+    /// by AppDelegate's 3 s permission poll.
+    @Published var isAccessibilityTrusted: Bool = AXIsProcessTrusted()
 }
 
 @MainActor
@@ -33,6 +36,7 @@ final class PanelController {
     private let settings: AppSettings
     private let onPaste: (ClipboardItem) -> Void
     private let onOpenSettings: () -> Void
+    private let onOpenAccessibility: () -> Void
     private var panel: NSPanel?
     private var capturedApp: NSRunningApplication?
     private var lastHiddenAt: Date = .distantPast
@@ -45,6 +49,7 @@ final class PanelController {
         anchorResolver: PanelAnchorResolver,
         settings: AppSettings,
         onOpenSettings: @escaping () -> Void,
+        onOpenAccessibility: @escaping () -> Void,
         onPaste: @escaping (ClipboardItem) -> Void
     ) {
         self.modelContainer = modelContainer
@@ -52,6 +57,7 @@ final class PanelController {
         self.anchorResolver = anchorResolver
         self.settings = settings
         self.onOpenSettings = onOpenSettings
+        self.onOpenAccessibility = onOpenAccessibility
         self.onPaste = onPaste
     }
 
@@ -76,6 +82,8 @@ final class PanelController {
 
         let panel = panel ?? makePanel()
         self.panel = panel
+
+        presentation.isAccessibilityTrusted = AXIsProcessTrusted()
 
         let anchor: PanelAnchor
         switch source {
@@ -131,6 +139,10 @@ final class PanelController {
             onOpenSettings: { [weak self] in
                 self?.hide()
                 self?.onOpenSettings()
+            },
+            onOpenAccessibility: { [weak self] in
+                self?.hide()
+                self?.onOpenAccessibility()
             }
         )
         .modelContainer(modelContainer)

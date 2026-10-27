@@ -22,19 +22,22 @@ struct HistoryPanelView: View {
     let onDismiss: () -> Void
     @ObservedObject var presentation: PanelPresentation
     let onOpenSettings: () -> Void
+    let onOpenAccessibility: () -> Void
 
     init(
         store: HistoryStore,
         onPaste: @escaping (ClipboardItem) -> Void,
         onDismiss: @escaping () -> Void,
         presentation: PanelPresentation,
-        onOpenSettings: @escaping () -> Void
+        onOpenSettings: @escaping () -> Void,
+        onOpenAccessibility: @escaping () -> Void
     ) {
         self.store = store
         self.onPaste = onPaste
         self.onDismiss = onDismiss
         self.presentation = presentation
         self.onOpenSettings = onOpenSettings
+        self.onOpenAccessibility = onOpenAccessibility
 
         let pinnedDescriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate { $0.isPinned },
@@ -57,6 +60,10 @@ struct HistoryPanelView: View {
 
             VStack(spacing: 10) {
                 headerBar
+
+                if !presentation.isAccessibilityTrusted {
+                    accessibilityBanner
+                }
 
                 if visibleItems.isEmpty {
                     emptyState
@@ -134,6 +141,37 @@ struct HistoryPanelView: View {
         } message: {
             Text("Pinned items will be kept.")
         }
+    }
+
+    /// Without Accessibility, ⌘V synthesis silently fails, so warn before the user picks an
+    /// item. Clicking does the same as the "Accessibility Permission" menu item.
+    private var accessibilityBanner: some View {
+        Button(action: onOpenAccessibility) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.body)
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Accessibility permission required")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Pasting won't work until access is granted. Click to fix.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+            .liquidGlass(.tinted(.orange), in: .roundedRect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .help("Accessibility Permission")
+        .accessibilityLabel("Accessibility permission required. Open setup.")
     }
 
     private var emptyState: some View {

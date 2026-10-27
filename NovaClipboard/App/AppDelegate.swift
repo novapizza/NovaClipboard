@@ -148,6 +148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         image?.isTemplate = trusted
         button.image = image
         accessibilityMenuItem?.isHidden = trusted
+        panelController?.presentation.isAccessibilityTrusted = trusted
     }
 
     private func setupPanelController() {
@@ -158,6 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             anchorResolver: anchorResolver,
             settings: settings,
             onOpenSettings: { [weak self] in self?.openSettings() },
+            onOpenAccessibility: { [weak self] in self?.openAccessibilityPermission() },
             onPaste: { [weak self] item in
                 guard let self else { return }
                 let target = self.panelController?.frontmostAppBeforeShow
