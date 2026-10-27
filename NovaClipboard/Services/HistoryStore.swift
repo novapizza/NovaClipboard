@@ -56,6 +56,20 @@ final class HistoryStore {
         try? context.save()
     }
 
+    var isEmpty: Bool {
+        let descriptor = FetchDescriptor<ClipboardItem>()
+        let count = (try? context.fetchCount(descriptor)) ?? 0
+        return count == 0
+    }
+
+    var hasClearableItems: Bool {
+        let descriptor = FetchDescriptor<ClipboardItem>(
+            predicate: #Predicate { !$0.isPinned }
+        )
+        let count = (try? context.fetchCount(descriptor)) ?? 0
+        return count > 0
+    }
+
     func fetchAll(limit: Int? = nil) -> [ClipboardItem] {
         var descriptor = FetchDescriptor<ClipboardItem>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]

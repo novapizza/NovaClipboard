@@ -101,8 +101,8 @@ struct HistoryPanelView: View {
                     .font(.caption.weight(.medium))
             }
             .buttonStyle(.liquidGlass())
-            .disabled(visibleItems.isEmpty)
-            .opacity(visibleItems.isEmpty ? 0.5 : 1)
+            .disabled(recentItems.isEmpty)
+            .opacity(recentItems.isEmpty ? 0.5 : 1)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)

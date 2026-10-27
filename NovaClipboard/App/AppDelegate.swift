@@ -8,7 +8,7 @@ import os
 private let appLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "AppDelegate")
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let settings = AppSettings.shared
     private var statusItem: NSStatusItem?
     private var modelContainer: ModelContainer?
@@ -367,6 +367,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func clearAll() {
         historyStore?.clearAll(keepPinned: true)
+    }
+
+    // MARK: - NSMenuItemValidation
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(clearAll) {
+            guard let historyStore else { return false }
+            return historyStore.hasClearableItems
+        }
+        return true
     }
 
     @objc private func openAccessibilityPermission() {
