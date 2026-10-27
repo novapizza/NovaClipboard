@@ -148,7 +148,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 guard let self else { return }
                 let target = self.panelController?.frontmostAppBeforeShow
                 appLogger.info("AppDelegate.onPaste fired, target=\(target?.bundleIdentifier ?? "nil", privacy: .public)")
-                self.pasteEngine.paste(item: item, toApp: target)
+                self.pasteEngine.paste(
+                    item: item,
+                    toApp: target,
+                    restoreClipboard: self.settings.restoreClipboardAfterPaste
+                )
             }
         )
     }
@@ -300,7 +304,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let items = store.fetchAll(limit: index + 1)
         guard items.indices.contains(index) else { return }
         appLogger.info("quickPaste index=\(index, privacy: .public)")
-        pasteEngine.paste(item: items[index], toApp: target)
+        pasteEngine.paste(
+            item: items[index],
+            toApp: target,
+            restoreClipboard: settings.restoreClipboardAfterPaste
+        )
     }
 
     private func applyHistoryLimit() {

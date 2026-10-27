@@ -120,6 +120,12 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(quickPasteEnabled, forKey: Key.quickPasteEnabled.rawValue) }
     }
 
+    /// When true, PasteEngine restores the pre-paste clipboard after ⌘V. Off by default so
+    /// the pasted item stays on the clipboard and can be pasted again elsewhere.
+    @Published var restoreClipboardAfterPaste: Bool {
+        didSet { defaults.set(restoreClipboardAfterPaste, forKey: Key.restoreClipboardAfterPaste.rawValue) }
+    }
+
     /// Carbon modifier mask prefixed to digits 1–9 for quick-paste (default ⌘⇧).
     @Published var quickPasteModifiers: UInt32 {
         didSet { defaults.set(Int(quickPasteModifiers), forKey: Key.quickPasteModifiers.rawValue) }
@@ -156,6 +162,7 @@ final class AppSettings: ObservableObject {
         self.quickPasteEnabled = (defaults.object(forKey: Key.quickPasteEnabled.rawValue) as? Bool) ?? true
         self.quickPasteModifiers = (defaults.object(forKey: Key.quickPasteModifiers.rawValue) as? Int)
             .map(UInt32.init) ?? UInt32(cmdKey | shiftKey)
+        self.restoreClipboardAfterPaste = (defaults.object(forKey: Key.restoreClipboardAfterPaste.rawValue) as? Bool) ?? false
 
         // First launch: persist default-true and register the login item so
         // the OS-level state matches the UI (didSet doesn't fire during init).
@@ -195,5 +202,6 @@ final class AppSettings: ObservableObject {
         case hasOnboarded
         case quickPasteEnabled
         case quickPasteModifiers
+        case restoreClipboardAfterPaste
     }
 }

@@ -61,16 +61,16 @@ Dedup is by SHA-256 over the content (text string, file-URL list joined by `\n`,
 
 ### Paste flow
 
-`PasteEngine.paste(item:toApp:)` is the load-bearing path and the trickiest piece to modify:
+`PasteEngine.paste(item:toApp:restoreClipboard:)` is the load-bearing path and the trickiest piece to modify:
 
-1. **Snapshot** the current pasteboard via `PasteboardSnapshot` (captures every `NSPasteboardItem` with all declared types).
+1. **Snapshot** the current pasteboard via `PasteboardSnapshot` (captures every `NSPasteboardItem` with all declared types) — only when `restoreClipboard` is true.
 2. Clear and rewrite the pasteboard with the history item's payload (text/image/file URLs).
 3. Require `AXIsProcessTrusted()` — if missing, raise the Accessibility alert and abort.
 4. Activate the target app (`PanelController.frontmostAppBeforeShow`, captured at `show()` before the panel stole focus).
 5. After 80 ms, synthesize ⌘V via `CGEvent` on `.cghidEventTap`.
-6. After `PasteEngine.restoreDelay` (500 ms), restore the original pasteboard snapshot.
+6. If restoring, after `PasteEngine.restoreDelay` (500 ms), restore the original pasteboard snapshot.
 
-The restore is what lets users keep their in-progress copy. If you change the timing or skip the snapshot you will break that contract — see Spec §3.3 in `.docs/spec.md`.
+`restoreClipboard` comes from `settings.restoreClipboardAfterPaste`, which is **off by default**: the pasted item stays on the clipboard so a second ⌘V elsewhere pastes the same item (what users of other clipboard managers expect). When the user turns it on, the restore lets them keep their in-progress copy — if you change the timing or skip the snapshot in that mode you break that contract. See Spec §3.3 in `.docs/spec.md` (step 5 is optional).
 
 ### Panel & hotkey
 

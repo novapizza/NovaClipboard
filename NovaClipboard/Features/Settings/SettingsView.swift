@@ -61,6 +61,9 @@ private struct GeneralTab: View {
                 QuickPasteHotKeyPicker(modifiers: $settings.quickPasteModifiers)
             }
 
+            Toggle("Restore previous clipboard after paste", isOn: $settings.restoreClipboardAfterPaste)
+                .help("When off, the pasted item stays on the clipboard so ⌘V pastes it again. When on, your previous clipboard comes back right after pasting.")
+
             Picker("Panel position", selection: $settings.panelPosition) {
                 Text("At caret").tag(PanelPositionPreference.atCaret)
                 Text("At mouse").tag(PanelPositionPreference.atMouse)
