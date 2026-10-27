@@ -41,7 +41,7 @@ extension ClipboardItem {
                 }
                 return nil
             }
-            provider.suggestedName = "Image"
+            provider.suggestedName = String(localized: "Image")
             return provider
 
         case .file:
