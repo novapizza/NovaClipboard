@@ -20,15 +20,21 @@ struct HistoryPanelView: View {
     let store: HistoryStore
     let onPaste: (ClipboardItem) -> Void
     let onDismiss: () -> Void
+    @ObservedObject var presentation: PanelPresentation
+    let onOpenSettings: () -> Void
 
     init(
         store: HistoryStore,
         onPaste: @escaping (ClipboardItem) -> Void,
-        onDismiss: @escaping () -> Void
+        onDismiss: @escaping () -> Void,
+        presentation: PanelPresentation,
+        onOpenSettings: @escaping () -> Void
     ) {
         self.store = store
         self.onPaste = onPaste
         self.onDismiss = onDismiss
+        self.presentation = presentation
+        self.onOpenSettings = onOpenSettings
 
         let pinnedDescriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate { $0.isPinned },
@@ -96,13 +102,24 @@ struct HistoryPanelView: View {
             Button {
                 showClearAllConfirm = true
             } label: {
-                Label("Clear", systemImage: "trash")
-                    .labelStyle(.titleAndIcon)
+                Label("Clear All", systemImage: "trash")
+                    .labelStyle(.iconOnly)
                     .font(.caption.weight(.medium))
             }
             .buttonStyle(.liquidGlass())
+            .help("Clear All")
             .disabled(recentItems.isEmpty)
             .opacity(recentItems.isEmpty ? 0.5 : 1)
+            // Settings stands in for the status-item menu that a left click no longer opens.
+            if presentation.openedFromStatusItem {
+                Button(action: onOpenSettings) {
+                    Label("Settings", systemImage: "gearshape")
+                        .labelStyle(.iconOnly)
+                        .font(.caption.weight(.medium))
+                }
+                .buttonStyle(.liquidGlass())
+                .help("Settings")
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)

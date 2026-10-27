@@ -11,6 +11,8 @@ private let appLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "A
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let settings = AppSettings.shared
     private var statusItem: NSStatusItem?
+    /// Shown on right-click (or Control-click) only; a left click opens the history panel.
+    private var statusMenu: NSMenu?
     private var modelContainer: ModelContainer?
     private var historyStore: HistoryStore?
     private var clipboardMonitor: ClipboardMonitor?
@@ -83,6 +85,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
             updateStatusIcon(button: button)
+            button.target = self
+            button.action = #selector(statusItemClicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
         let menu = NSMenu()
@@ -123,7 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let quitItem = NSMenuItem(title: "Quit NovaClipboard", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-        item.menu = menu
+        statusMenu = menu
 
         statusItem = item
     }
@@ -144,6 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             historyStore: historyStore,
             anchorResolver: anchorResolver,
             settings: settings,
+            onOpenSettings: { [weak self] in self?.openSettings() },
             onPaste: { [weak self] item in
                 guard let self else { return }
                 let target = self.panelController?.frontmostAppBeforeShow
@@ -351,8 +357,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     // MARK: - Menu actions
 
+    /// "Show History" from the right-click menu: open under the icon, like a left click.
     @objc private func togglePanel() {
-        panelController?.toggle()
+        guard let button = statusItem?.button, let rect = statusItemScreenRect(button) else {
+            panelController?.toggle()
+            return
+        }
+        panelController?.toggle(source: .statusItem(rect))
+    }
+
+    private func statusItemScreenRect(_ button: NSStatusBarButton) -> CGRect? {
+        guard let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        guard let statusItem else { return }
+        let event = NSApp.currentEvent
+        let wantsMenu = event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true
+        if wantsMenu {
+            panelController?.hide()
+            // Attach the menu only for this click so left clicks keep reaching this action.
+            statusItem.menu = statusMenu
+            sender.performClick(nil)
+            statusItem.menu = nil
+            return
+        }
+        guard let rect = statusItemScreenRect(sender) else { return }
+        panelController?.toggle(source: .statusItem(rect))
     }
 
     @objc private func openSettings() {

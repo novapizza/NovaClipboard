@@ -5,29 +5,53 @@ import os
 
 private let panelLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "PanelController")
 
+/// Where a panel show request came from. Opening from the menu-bar icon anchors the
+/// panel under the icon and adds a Settings button to the header.
+enum PanelSource {
+    case hotKey
+    case statusItem(CGRect)
+}
+
+/// Observable state the long-lived `HistoryPanelView` reads; the view is built once in
+/// `makePanel()`, so per-show changes have to flow through here.
+@MainActor
+final class PanelPresentation: ObservableObject {
+    @Published var openedFromStatusItem: Bool = false
+}
+
 @MainActor
 final class PanelController {
     static let panelSize = CGSize(width: 380, height: 480)
+
+    /// A status-item click lands after the panel already hid itself on resign-key;
+    /// clicks within this window of a hide are treated as "close", not "reopen".
+    private static let reopenSuppressInterval: TimeInterval = 0.3
 
     private let modelContainer: ModelContainer
     private let historyStore: HistoryStore
     private let anchorResolver: PanelAnchorResolver
     private let settings: AppSettings
     private let onPaste: (ClipboardItem) -> Void
+    private let onOpenSettings: () -> Void
     private var panel: NSPanel?
     private var capturedApp: NSRunningApplication?
+    private var lastHiddenAt: Date = .distantPast
+
+    let presentation = PanelPresentation()
 
     init(
         modelContainer: ModelContainer,
         historyStore: HistoryStore,
         anchorResolver: PanelAnchorResolver,
         settings: AppSettings,
+        onOpenSettings: @escaping () -> Void,
         onPaste: @escaping (ClipboardItem) -> Void
     ) {
         self.modelContainer = modelContainer
         self.historyStore = historyStore
         self.anchorResolver = anchorResolver
         self.settings = settings
+        self.onOpenSettings = onOpenSettings
         self.onPaste = onPaste
     }
 
@@ -35,22 +59,35 @@ final class PanelController {
 
     var frontmostAppBeforeShow: NSRunningApplication? { capturedApp }
 
-    func toggle() {
+    func toggle(source: PanelSource = .hotKey) {
         if isVisible {
             hide()
-        } else {
-            show()
+            return
         }
+        if case .statusItem = source,
+           Date().timeIntervalSince(lastHiddenAt) < PanelController.reopenSuppressInterval {
+            return
+        }
+        show(source: source)
     }
 
-    func show() {
+    func show(source: PanelSource = .hotKey) {
         capturedApp = NSWorkspace.shared.frontmostApplication
 
         let panel = panel ?? makePanel()
         self.panel = panel
 
-        anchorResolver.fixedOrigin = settings.fixedPanelOrigin
-        let anchor = anchorResolver.resolve(preference: settings.panelPosition)
+        let anchor: PanelAnchor
+        switch source {
+        case .hotKey:
+            anchorResolver.fixedOrigin = settings.fixedPanelOrigin
+            anchor = anchorResolver.resolve(preference: settings.panelPosition)
+            presentation.openedFromStatusItem = false
+        case .statusItem(let rect):
+            anchor = .statusItem(rect)
+            presentation.openedFromStatusItem = true
+        }
+
         let screen = currentScreen(for: anchor)
         let origin = anchor.panelOrigin(panelSize: PanelController.panelSize, screen: screen)
         panel.setFrameOrigin(origin)
@@ -60,7 +97,9 @@ final class PanelController {
     }
 
     func hide() {
-        panel?.orderOut(nil)
+        guard let panel, panel.isVisible else { return }
+        panel.orderOut(nil)
+        lastHiddenAt = Date()
     }
 
     private func currentScreen(for anchor: PanelAnchor) -> NSScreen? {
@@ -70,6 +109,8 @@ final class PanelController {
             point = CGPoint(x: r.midX, y: r.midY)
         case .mouse(let p), .fixed(let p):
             point = p
+        case .statusItem(let r):
+            point = CGPoint(x: r.midX, y: r.midY)
         }
         return NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main
     }
@@ -83,7 +124,14 @@ final class PanelController {
                 self.hide()
                 self.onPaste(item)
             },
-            onDismiss: { [weak self] in self?.hide() }
+            onDismiss: { [weak self] in self?.hide() },
+            presentation: presentation,
+            // Settings activates the app; leave the `.floating` panel first so it
+            // doesn't sit on top of the settings window.
+            onOpenSettings: { [weak self] in
+                self?.hide()
+                self?.onOpenSettings()
+            }
         )
         .modelContainer(modelContainer)
 
@@ -120,6 +168,7 @@ final class PanelController {
         }
         return panel
     }
+
 }
 
 private final class HistoryPanel: NSPanel {
