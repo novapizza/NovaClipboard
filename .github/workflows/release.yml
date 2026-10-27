@@ -20,7 +20,7 @@ jobs:
     environment: Production
 
     name: Build and Publish macOS
-    runs-on: macos-27
+    runs-on: macos-26
     timeout-minutes: 40
 
     steps:
@@ -29,6 +29,15 @@ jobs:
           fetch-depth: 0   # full history so rev-list count is correct
 
       # ── Toolchain ────────────────────────────────────────────────────────────
+      # The image defaults to Xcode 26, but the app uses macOS 27 SDK APIs
+      # (behind #available), so pick the newest installed Xcode 27.
+      - name: Select Xcode 27
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -n1)
+          [ -n "$XCODE" ] || { echo "ERROR: no Xcode 27 on this runner"; ls -d /Applications/Xcode*.app; exit 1; }
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
       - name: Install XcodeGen
         run: brew install xcodegen && brew pin xcodegen
 
