@@ -10,17 +10,12 @@ struct PermissionsView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.22),
-                    Color.purple.opacity(0.12),
-                    Color.blue.opacity(0.14)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            LiquidGlassBackdrop(colors: [
+                Color.accentColor.opacity(0.22),
+                Color.purple.opacity(0.12),
+                Color.blue.opacity(0.14)
+            ])
             .ignoresSafeArea()
-            Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
 
             VStack(spacing: 20) {
                 Image(systemName: "doc.on.clipboard.fill")

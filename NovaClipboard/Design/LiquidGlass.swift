@@ -47,6 +47,21 @@ extension View {
         }
     }
 
+    /// Background for elements that sit *on* a glass surface (history rows, tiles,
+    /// banners). On macOS 26+ the panel itself is system glass, so these use a flat
+    /// fill instead of nesting glass in glass; older systems keep `liquidGlass`.
+    @ViewBuilder
+    func liquidGlassContent(
+        _ variant: LiquidGlassVariant = .regular,
+        in shape: LiquidGlassShape = .capsule
+    ) -> some View {
+        if #available(macOS 26.0, *) {
+            self.background(shape.swiftUIShape().fill(variant.contentFill))
+        } else {
+            self.modifier(FallbackGlassModifier(variant: variant, shape: shape))
+        }
+    }
+
     /// Wraps content so multiple glass shapes inside merge into a single
     /// optical layer (with the characteristic Liquid Glass morph). No-op on
     /// older macOS.
@@ -56,6 +71,36 @@ extension View {
             GlassEffectContainer(spacing: spacing) { self }
         } else {
             self
+        }
+    }
+}
+
+private extension LiquidGlassVariant {
+    var contentFill: Color {
+        switch self {
+        case .regular: return Color.primary.opacity(0.06)
+        case .prominent: return Color.primary.opacity(0.10)
+        case .clear: return .clear
+        case .tinted(let c): return c.opacity(0.22)
+        }
+    }
+}
+
+/// Window backdrop. On macOS 26+ it is empty so the system background shows through —
+/// the history panel's `NSGlassEffectView`, or a standard window's own material — and
+/// the user's Liquid Glass appearance settings apply. Older systems get the tinted
+/// gradient under `.ultraThinMaterial` so glass elements have color to refract.
+struct LiquidGlassBackdrop: View {
+    var colors: [Color]
+
+    var body: some View {
+        if #available(macOS 26.0, *) {
+            Color.clear
+        } else {
+            ZStack {
+                LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                Rectangle().fill(.ultraThinMaterial)
+            }
         }
     }
 }

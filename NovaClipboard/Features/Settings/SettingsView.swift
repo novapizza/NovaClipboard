@@ -7,16 +7,11 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.14),
-                    Color.purple.opacity(0.08),
-                    Color.blue.opacity(0.10)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Rectangle().fill(.ultraThinMaterial)
+            LiquidGlassBackdrop(colors: [
+                Color.accentColor.opacity(0.14),
+                Color.purple.opacity(0.08),
+                Color.blue.opacity(0.10)
+            ])
 
             TabView {
                 GeneralTab(settings: settings)

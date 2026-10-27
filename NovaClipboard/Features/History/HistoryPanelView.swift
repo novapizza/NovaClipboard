@@ -93,21 +93,11 @@ struct HistoryPanelView: View {
     }
 
     private var panelBackground: some View {
-        ZStack {
-            // Soft tinted gradient backdrop so Liquid Glass has something
-            // colorful to refract. On macOS 14/15 this is still the visual
-            // floor under the .ultraThinMaterial fallback.
-            LinearGradient(
-                colors: [
-                    Color.accentColor.opacity(0.18),
-                    Color.purple.opacity(0.10),
-                    Color.blue.opacity(0.12)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Rectangle().fill(.ultraThinMaterial)
-        }
+        LiquidGlassBackdrop(colors: [
+            Color.accentColor.opacity(0.18),
+            Color.purple.opacity(0.10),
+            Color.blue.opacity(0.12)
+        ])
     }
 
     private var headerBar: some View {
@@ -176,7 +166,7 @@ struct HistoryPanelView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .contentShape(Rectangle())
-            .liquidGlass(.tinted(.orange), in: .roundedRect(cornerRadius: 12))
+            .liquidGlassContent(.tinted(.orange), in: .roundedRect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .help("Accessibility Permission")
@@ -189,7 +179,7 @@ struct HistoryPanelView: View {
                 .font(.system(size: 28, weight: .light))
                 .foregroundStyle(.secondary)
                 .padding(14)
-                .liquidGlass(.regular, in: .circle)
+                .liquidGlassContent(.regular, in: .circle)
                 .padding(.bottom, 4)
             Text("Nothing here")
                 .font(.headline)

@@ -25,6 +25,7 @@ final class PanelPresentation: ObservableObject {
 @MainActor
 final class PanelController {
     static let panelSize = CGSize(width: 380, height: 480)
+    static let cornerRadius: CGFloat = 10
 
     /// A status-item click lands after the panel already hid itself on resign-key;
     /// clicks within this window of a hide are treated as "close", not "reopen".
@@ -38,6 +39,9 @@ final class PanelController {
     private let onOpenSettings: () -> Void
     private let onOpenAccessibility: () -> Void
     private var panel: NSPanel?
+    /// Retained here when the hosting view is embedded in an `NSGlassEffectView`
+    /// instead of being the panel's `contentViewController`.
+    private var hostingController: NSViewController?
     private var capturedApp: NSRunningApplication?
     private var lastHiddenAt: Date = .distantPast
 
@@ -156,7 +160,6 @@ final class PanelController {
             backing: .buffered,
             defer: false
         )
-        panel.contentViewController = hosting
         panel.hasShadow = true
         panel.isFloatingPanel = true
         panel.level = .floating
@@ -167,9 +170,20 @@ final class PanelController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.contentView?.wantsLayer = true
-        panel.contentView?.layer?.cornerRadius = 10
-        panel.contentView?.layer?.masksToBounds = true
+        if #available(macOS 26.0, *) {
+            // System glass behind the whole panel, so it follows the user's Liquid Glass
+            // appearance (transparency/tint) like menus and popovers do.
+            let glass = NSGlassEffectView(frame: NSRect(origin: .zero, size: PanelController.panelSize))
+            glass.cornerRadius = PanelController.cornerRadius
+            glass.contentView = hosting.view
+            panel.contentView = glass
+            hostingController = hosting
+        } else {
+            panel.contentViewController = hosting
+            panel.contentView?.wantsLayer = true
+            panel.contentView?.layer?.cornerRadius = PanelController.cornerRadius
+            panel.contentView?.layer?.masksToBounds = true
+        }
 
         panel.onResignKey = { [weak self] in
             // Skip hide while a dialog owns focus, otherwise the dialog loses its
