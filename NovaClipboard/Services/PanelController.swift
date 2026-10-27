@@ -1,4 +1,5 @@
 import AppKit
+import QuickLookUI
 import SwiftData
 import SwiftUI
 import os
@@ -20,6 +21,8 @@ final class PanelPresentation: ObservableObject {
     /// Drives the "Accessibility permission required" banner. Refreshed on every show and
     /// by AppDelegate's 3 s permission poll.
     @Published var isAccessibilityTrusted: Bool = AXIsProcessTrusted()
+    /// Bumped on every show so the long-lived view can reset per-show state.
+    @Published var showCount: Int = 0
 }
 
 @MainActor
@@ -35,7 +38,7 @@ final class PanelController {
     private let historyStore: HistoryStore
     private let anchorResolver: PanelAnchorResolver
     private let settings: AppSettings
-    private let onPaste: (ClipboardItem) -> Void
+    private let onPaste: ([ClipboardItem]) -> Void
     private let onOpenSettings: () -> Void
     private let onOpenAccessibility: () -> Void
     private var panel: NSPanel?
@@ -44,6 +47,7 @@ final class PanelController {
     private var hostingController: NSViewController?
     private var capturedApp: NSRunningApplication?
     private var lastHiddenAt: Date = .distantPast
+    private let previewController = ItemPreviewController()
 
     let presentation = PanelPresentation()
 
@@ -54,7 +58,7 @@ final class PanelController {
         settings: AppSettings,
         onOpenSettings: @escaping () -> Void,
         onOpenAccessibility: @escaping () -> Void,
-        onPaste: @escaping (ClipboardItem) -> Void
+        onPaste: @escaping ([ClipboardItem]) -> Void
     ) {
         self.modelContainer = modelContainer
         self.historyStore = historyStore
@@ -88,6 +92,7 @@ final class PanelController {
         self.panel = panel
 
         presentation.isAccessibilityTrusted = AXIsProcessTrusted()
+        presentation.showCount += 1
 
         let anchor: PanelAnchor
         switch source {
@@ -110,6 +115,7 @@ final class PanelController {
 
     func hide() {
         guard let panel, panel.isVisible else { return }
+        previewController.close()
         panel.orderOut(nil)
         lastHiddenAt = Date()
     }
@@ -130,13 +136,23 @@ final class PanelController {
     private func makePanel() -> NSPanel {
         let contentView = HistoryPanelView(
             store: historyStore,
-            onPaste: { [weak self] item in
+            onPaste: { [weak self] items in
                 guard let self else { return }
-                panelLogger.info("PanelController.onPaste from row click/enter")
+                panelLogger.info("PanelController.onPaste from row click/enter, count=\(items.count, privacy: .public)")
                 self.hide()
-                self.onPaste(item)
+                self.onPaste(items)
             },
-            onDismiss: { [weak self] in self?.hide() },
+            // Esc closes an open Quick Look first, like Finder.
+            onDismiss: { [weak self] in
+                guard let self else { return }
+                if self.previewController.isVisible {
+                    self.previewController.close()
+                } else {
+                    self.hide()
+                }
+            },
+            onTogglePreview: { [weak self] item in self?.previewController.toggle(item: item) },
+            onSelectionChanged: { [weak self] item in self?.previewController.selectionChanged(to: item) },
             presentation: presentation,
             // Settings activates the app; leave the `.floating` panel first so it
             // doesn't sit on top of the settings window.
@@ -160,6 +176,7 @@ final class PanelController {
             backing: .buffered,
             defer: false
         )
+        panel.previewController = previewController
         panel.hasShadow = true
         panel.isFloatingPanel = true
         panel.level = .floating
@@ -189,6 +206,9 @@ final class PanelController {
             // Skip hide while a dialog owns focus, otherwise the dialog loses its
             // parent and the UI breaks. confirmationDialog is a window-attached sheet
             // (never sets NSApp.modalWindow), so check attachedSheet as well.
+            // Clicking into Quick Look (e.g. its full-screen button) moves key there; keep
+            // the history panel up so the preview keeps its controller.
+            if self?.previewController.isVisible == true { return }
             if NSApp.modalWindow != nil || self?.panel?.attachedSheet != nil { return }
             self?.hide()
         }
@@ -199,6 +219,7 @@ final class PanelController {
 
 private final class HistoryPanel: NSPanel {
     var onResignKey: (() -> Void)?
+    weak var previewController: ItemPreviewController?
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
@@ -210,5 +231,19 @@ private final class HistoryPanel: NSPanel {
 
     override func cancelOperation(_ sender: Any?) {
         orderOut(nil)
+    }
+
+    // MARK: Quick Look panel control (responder-chain protocol)
+
+    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool {
+        previewController != nil
+    }
+
+    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        previewController?.beginControl(panel)
+    }
+
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        previewController?.endControl(panel)
     }
 }

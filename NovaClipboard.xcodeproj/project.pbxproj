@@ -19,6 +19,8 @@
 		58E2F4282B67437B349A840C /* KeyCombo.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1138540629F3296E37191 /* KeyCombo.swift */; };
 		5E5300685781376CF1201021 /* HistoryItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */; };
 		654A93111DD1CBD097094D5D /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894927E657A5FDDB08FA977D /* ClipboardItem.swift */; };
+		6F4FFDBFEFDF09411D527C31 /* ItemPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B78DD8C00537A18A5A0518 /* ItemPreviewController.swift */; };
+		70E28C59D6830C90BE7CE723 /* CombinedPasteboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00800DCF2CEB42D7E3AFC678 /* CombinedPasteboardTests.swift */; };
 		7198F76F53036F6C71C99EBF /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DF00C7E8C96D8ABB8A88CD /* HotKeyManager.swift */; };
 		77AF6D1F3E0C4F667864B5BD /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905BB92C1BB6730E852D92C3 /* PermissionsView.swift */; };
 		81E40A6E345BEF24697F9AD0 /* NovaClipboardApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B9F370053323D9F661E40C /* NovaClipboardApp.swift */; };
@@ -52,6 +54,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		00800DCF2CEB42D7E3AFC678 /* CombinedPasteboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CombinedPasteboardTests.swift; sourceTree = "<group>"; };
 		1D846BACDA5C11B67B740EF1 /* PasteEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteEngine.swift; sourceTree = "<group>"; };
 		1ED5253D88A161094198F006 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		41DF00C7E8C96D8ABB8A88CD /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
@@ -59,6 +62,7 @@
 		46AE55FFF77561BB245F2A20 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		55FEC238EDDF1791D0112F4D /* ScreenshotPreviewPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotPreviewPreference.swift; sourceTree = "<group>"; };
 		5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryItemRow.swift; sourceTree = "<group>"; };
+		60B78DD8C00537A18A5A0518 /* ItemPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemPreviewController.swift; sourceTree = "<group>"; };
 		7D1E1FFCA19F31AD16772FC6 /* FaviconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconCache.swift; sourceTree = "<group>"; };
 		82112A46989E8A9859481866 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
 		894927E657A5FDDB08FA977D /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
@@ -116,6 +120,7 @@
 				B5A562B1165A6E63885B35C7 /* ClipboardItem+Drag.swift */,
 				5704F006ED470C2316A6EC39 /* HistoryItemRow.swift */,
 				8E983524F663810FD4E66441 /* HistoryPanelView.swift */,
+				60B78DD8C00537A18A5A0518 /* ItemPreviewController.swift */,
 			);
 			path = History;
 			sourceTree = "<group>";
@@ -177,6 +182,7 @@
 			children = (
 				9AD8F6638AD67BC883E1216A /* ChecksumTests.swift */,
 				C75E2455BB1F86E371574F48 /* ClipboardMonitorTests.swift */,
+				00800DCF2CEB42D7E3AFC678 /* CombinedPasteboardTests.swift */,
 				995E042E52580CF288E1D553 /* HistoryStoreTests.swift */,
 				DF59BF63DC699D64BBBFF1A2 /* NovaClipboardTests.swift */,
 				B3CFB3599DB4BE8516413427 /* PasteboardSnapshotTests.swift */,
@@ -355,6 +361,7 @@
 				05AEDDF5D6F491EECD68F194 /* HistoryStore.swift in Sources */,
 				7198F76F53036F6C71C99EBF /* HotKeyManager.swift in Sources */,
 				10442D53F4349C0CAD5958A7 /* ImageStore.swift in Sources */,
+				6F4FFDBFEFDF09411D527C31 /* ItemPreviewController.swift in Sources */,
 				58E2F4282B67437B349A840C /* KeyCombo.swift in Sources */,
 				11A220002A8169EC0D814480 /* LaunchAtLogin.swift in Sources */,
 				31FC2D2B4DE119AC961BF230 /* LiquidGlass.swift in Sources */,
@@ -376,6 +383,7 @@
 			files = (
 				C6717B036D85549822CE0628 /* ChecksumTests.swift in Sources */,
 				DF8A9F366CFA575C61FDC20D /* ClipboardMonitorTests.swift in Sources */,
+				70E28C59D6830C90BE7CE723 /* CombinedPasteboardTests.swift in Sources */,
 				882186C13BA4A6A35F055CE0 /* HistoryStoreTests.swift in Sources */,
 				A22F8B5790DDF41DCF8C477A /* NovaClipboardTests.swift in Sources */,
 				EBD1149D299ADF7F48358626 /* PasteboardSnapshotTests.swift in Sources */,

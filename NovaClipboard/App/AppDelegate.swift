@@ -160,12 +160,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             settings: settings,
             onOpenSettings: { [weak self] in self?.openSettings() },
             onOpenAccessibility: { [weak self] in self?.openAccessibilityPermission() },
-            onPaste: { [weak self] item in
+            onPaste: { [weak self] items in
                 guard let self else { return }
                 let target = self.panelController?.frontmostAppBeforeShow
                 appLogger.info("AppDelegate.onPaste fired, target=\(target?.bundleIdentifier ?? "nil", privacy: .public)")
                 self.pasteEngine.paste(
-                    item: item,
+                    items: items,
                     toApp: target,
                     restoreClipboard: self.settings.restoreClipboardAfterPaste
                 )

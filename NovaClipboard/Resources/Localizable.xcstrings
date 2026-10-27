@@ -47,6 +47,16 @@
         }
       }
     },
+    "%lld selected" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã chọn %lld"
+          }
+        }
+      }
+    },
     "30 days" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -238,6 +248,16 @@
         }
       }
     },
+    "Click items to select multiple" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bấm vào các mục để chọn nhiều"
+          }
+        }
+      }
+    },
     "Clipboard" : {
       "localizations" : {
         "vi" : {
@@ -319,6 +339,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tắt ảnh xem trước nổi để tệp được lưu vào Desktop ngay lập tức. Có hiệu lực từ lần chụp ⌘⇧3/4/5 tiếp theo."
+          }
+        }
+      }
+    },
+    "Deselect" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bỏ chọn"
+          }
+        }
+      }
+    },
+    "Drag and drop where you want to paste" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kéo và thả vào nơi bạn muốn dán"
           }
         }
       }
@@ -579,6 +619,16 @@
         }
       }
     },
+    "Paste all" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dán tất cả"
+          }
+        }
+      }
+    },
     "Paste items by simulating ⌘V into the active app" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -694,6 +744,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nhấn Enter để dán"
+          }
+        }
+      }
+    },
+    "Preview" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xem trước"
           }
         }
       }
@@ -835,6 +895,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chọn"
+          }
+        }
+      }
+    },
+    "Selected %lld. " : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã chọn %lld. "
           }
         }
       }
