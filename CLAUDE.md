@@ -78,7 +78,7 @@ Dedup is by SHA-256 over the content (text string, file-URL list joined by `\n`,
 
 ### Permissions
 
-Accessibility is required for both ⌘V synthesis and caret detection. `AppDelegate.startPermissionMonitor` polls `AXIsProcessTrusted()` every 3 s and swaps the status-item SF Symbol (`doc.on.clipboard` ↔ `exclamationmark.triangle`). The onboarding window auto-shows only on the genuine first launch (`!settings.hasOnboarded`); a later revocation is surfaced by the warning icon and the conditional "Accessibility Permission…" menu item.
+Accessibility is required for both ⌘V synthesis and caret detection. `AppDelegate.startPermissionMonitor` polls `AXIsProcessTrusted()` every 3 s and swaps the status-item SF Symbol (`doc.on.clipboard` ↔ `exclamationmark.triangle`). The onboarding window auto-shows only on the genuine first launch (`!settings.hasOnboarded`); a later revocation is surfaced by the warning icon and the conditional "Accessibility Permission" menu item.
 
 Launch-at-login uses `SMAppService` via `Utilities/LaunchAtLogin.swift`; on first run the OS-level state is synced to match the in-app toggle so the UI cannot lie.
 

@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Only auto-present the welcome window on the genuine first launch.
         // If Accessibility is revoked or invalidated later (e.g. signature change after rebuild
         // or auto-update), surface it via the menu-bar warning icon plus the conditional
-        // "Accessibility Permission…" menu item instead of popping a modal each launch.
+        // "Accessibility Permission" menu item instead of popping a modal each launch.
         if !settings.hasOnboarded {
             showOnboarding()
         }
@@ -95,12 +95,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         showItem.target = self
         menu.addItem(showItem)
 
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(title: "Settings", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         let updateItem = NSMenuItem(
-            title: "Check for Updates…",
+            title: "Check for Updates",
             action: #selector(UpdateController.checkForUpdates(_:)),
             keyEquivalent: ""
         )
@@ -108,7 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         menu.addItem(updateItem)
 
         let permissionItem = NSMenuItem(
-            title: "Accessibility Permission…",
+            title: "Accessibility Permission",
             action: #selector(openAccessibilityPermission),
             keyEquivalent: ""
         )
@@ -125,9 +125,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "Quit NovaClipboard", action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
+
+        // macOS 27 auto-adds symbols to some items (e.g. a gear for Settings); hide them so
+        // every action in this menu looks the same.
+        if #available(macOS 27.0, *) {
+            for menuItem in menu.items {
+                menuItem.preferredImageVisibility = .hidden
+            }
+        }
         statusMenu = menu
 
         statusItem = item
@@ -344,7 +352,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func startPermissionMonitor() {
         // Poll in both directions: the grant can disappear mid-session (revoked in System
         // Settings, or invalidated by a signature change after rebuild/auto-update), and the
-        // warning icon + "Accessibility Permission…" menu item are the only surfaces for it
+        // warning icon + "Accessibility Permission" menu item are the only surfaces for it
         // now that onboarding no longer re-prompts after first launch.
         let timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
