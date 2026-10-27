@@ -115,17 +115,17 @@ final class PasteEngine {
         DispatchQueue.main.async {
             NSApp.activate(ignoringOtherApps: true)
             let alert = NSAlert()
-            alert.messageText = "Accessibility permission required"
-            alert.informativeText = """
+            alert.messageText = String(localized: "Accessibility permission required")
+            alert.informativeText = String(localized: """
             NovaClipboard needs Accessibility permission to paste into the active app.
 
             1. Open System Settings → Privacy & Security → Accessibility
             2. Remove any old NovaClipboard entry, then add this .app
             3. Enable the toggle and relaunch NovaClipboard
-            """
+            """)
             alert.alertStyle = .warning
-            alert.addButton(withTitle: "Open System Settings")
-            alert.addButton(withTitle: "Later")
+            alert.addButton(withTitle: String(localized: "Open System Settings"))
+            alert.addButton(withTitle: String(localized: "Later"))
             if alert.runModal() == .alertFirstButtonReturn {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                     NSWorkspace.shared.open(url)

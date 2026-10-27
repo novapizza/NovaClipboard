@@ -58,6 +58,16 @@
         }
       }
     },
+    "About" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giới thiệu"
+          }
+        }
+      }
+    },
     "Accessibility Permission" : {
       "localizations" : {
         "vi" : {
@@ -504,6 +514,16 @@
         }
       }
     },
+    "NovaClipboard needs Accessibility permission to paste into the active app.\n\n1. Open System Settings → Privacy & Security → Accessibility\n2. Remove any old NovaClipboard entry, then add this .app\n3. Enable the toggle and relaunch NovaClipboard" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NovaClipboard cần quyền Trợ năng để dán vào ứng dụng đang hoạt động.\n\n1. Mở Cài đặt Hệ thống → Quyền riêng tư & Bảo mật → Trợ năng\n2. Xóa mục NovaClipboard cũ (nếu có), rồi thêm ứng dụng .app này\n3. Bật công tắc và mở lại NovaClipboard"
+          }
+        }
+      }
+    },
     "NovaClipboard needs to restart to change the language." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -805,6 +825,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ảnh chụp màn hình · %.1f MB"
+          }
+        }
+      }
+    },
+    "Select" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn"
           }
         }
       }
