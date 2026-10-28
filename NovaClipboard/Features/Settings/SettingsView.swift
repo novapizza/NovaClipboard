@@ -77,6 +77,9 @@ private struct GeneralTab: View {
             Toggle("Restore previous clipboard after paste", isOn: $settings.restoreClipboardAfterPaste)
                 .help("When off, the pasted item stays on the clipboard so ⌘V pastes it again. When on, your previous clipboard comes back right after pasting.")
 
+            Toggle("Auto-hide header and shortcut bar", isOn: $settings.autoHidePanelChrome)
+                .help("Keeps the panel to just the list. The shortcut bar appears while you hold ⇧ to select multiple items or drag one. Clear All and Settings stay in the menu-bar menu.")
+
             Picker("Panel position", selection: $settings.panelPosition) {
                 Text("At caret").tag(PanelPositionPreference.atCaret)
                 Text("At mouse").tag(PanelPositionPreference.atMouse)

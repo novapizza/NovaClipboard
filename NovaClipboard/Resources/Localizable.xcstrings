@@ -150,6 +150,16 @@
         }
       }
     },
+    "Auto-hide header and shortcut bar" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động ẩn thanh tiêu đề và thanh phím tắt"
+          }
+        }
+      }
+    },
     "Automatic" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -434,6 +444,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hình ảnh"
+          }
+        }
+      }
+    },
+    "Keeps the panel to just the list. The shortcut bar appears while you hold ⇧ to select multiple items or drag one. Clear All and Settings stay in the menu-bar menu." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panel chỉ hiện danh sách. Thanh phím tắt sẽ hiện khi bạn giữ ⇧ để chọn nhiều mục hoặc khi kéo thả. Xóa tất cả và Cài đặt vẫn có trong menu trên thanh menu."
           }
         }
       }

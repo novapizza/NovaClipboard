@@ -157,6 +157,13 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(restoreClipboardAfterPaste, forKey: Key.restoreClipboardAfterPaste.rawValue) }
     }
 
+    /// When true, the history panel hides its header (title, Clear All, Settings) and shows
+    /// the shortcut bar only for multi-select and drag hints. Header actions stay in the
+    /// menu-bar menu.
+    @Published var autoHidePanelChrome: Bool {
+        didSet { defaults.set(autoHidePanelChrome, forKey: Key.autoHidePanelChrome.rawValue) }
+    }
+
     /// Carbon modifier mask prefixed to digits 1–9 for quick-paste (default ⌘⇧).
     @Published var quickPasteModifiers: UInt32 {
         didSet { defaults.set(Int(quickPasteModifiers), forKey: Key.quickPasteModifiers.rawValue) }
@@ -208,6 +215,7 @@ final class AppSettings: ObservableObject {
         self.appLanguage = (defaults.string(forKey: Key.appLanguage.rawValue)
             .flatMap(AppLanguage.init(rawValue:))) ?? .system
         self.restoreClipboardAfterPaste = (defaults.object(forKey: Key.restoreClipboardAfterPaste.rawValue) as? Bool) ?? false
+        self.autoHidePanelChrome = (defaults.object(forKey: Key.autoHidePanelChrome.rawValue) as? Bool) ?? false
 
         // First launch: persist default-true and register the login item so
         // the OS-level state matches the UI (didSet doesn't fire during init).
@@ -259,5 +267,6 @@ final class AppSettings: ObservableObject {
         case quickPasteModifiers
         case appLanguage
         case restoreClipboardAfterPaste
+        case autoHidePanelChrome
     }
 }
