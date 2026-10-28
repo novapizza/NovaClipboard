@@ -82,19 +82,34 @@ struct HistoryPanelView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 10) {
-                headerBar
+                if !settings.autoHidePanelChrome {
+                    headerBar
+                }
 
                 if !presentation.isAccessibilityTrusted {
                     accessibilityBanner
                 }
 
-                if visibleItems.isEmpty {
-                    emptyState
-                } else {
-                    listBody
+                Group {
+                    if visibleItems.isEmpty {
+                        emptyState
+                    } else {
+                        listBody
+                    }
                 }
+                // Auto-hide floats the bar over the list instead of resizing it, so rows
+                // don't shift under the cursor mid ⇧-click or drag.
+                .overlay(alignment: .bottom) {
+                    if settings.autoHidePanelChrome && statusMode != .shortcuts {
+                        statusBar
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .animation(.easeInOut(duration: 0.15), value: statusMode)
 
-                statusBar
+                if !settings.autoHidePanelChrome {
+                    statusBar
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 10)
