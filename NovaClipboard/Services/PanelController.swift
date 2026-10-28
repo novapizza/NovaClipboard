@@ -111,6 +111,10 @@ final class PanelController {
 
         panel.orderFrontRegardless()
         panel.makeKey()
+        // A borderless, transparent window's shadow is traced from its pixels when it
+        // first draws; if that happens before the glass renders, the shadow keeps a
+        // square outline around the rounded corners. Re-trace once content is up.
+        DispatchQueue.main.async { [weak panel] in panel?.invalidateShadow() }
     }
 
     func hide() {
@@ -192,6 +196,10 @@ final class PanelController {
             // appearance (transparency/tint) like menus and popovers do.
             let glass = NSGlassEffectView(frame: NSRect(origin: .zero, size: PanelController.panelSize))
             glass.cornerRadius = PanelController.cornerRadius
+            glass.wantsLayer = true
+            glass.layer?.cornerRadius = PanelController.cornerRadius
+            glass.layer?.cornerCurve = .continuous
+            glass.layer?.masksToBounds = true
             glass.contentView = hosting.view
             panel.contentView = glass
             hostingController = hosting
