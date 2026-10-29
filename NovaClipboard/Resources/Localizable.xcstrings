@@ -373,6 +373,16 @@
         }
       }
     },
+    "Export Diagnostics" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xuất thông tin chẩn đoán"
+          }
+        }
+      }
+    },
     "File" : {
       "extractionState" : "stale",
       "localizations" : {

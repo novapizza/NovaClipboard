@@ -31,6 +31,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         appLogger.info("NovaClipboard launching, phase-2 build")
+        if isAnotherInstanceRunning() {
+            appLogger.error("Another NovaClipboard instance is already running; quitting")
+            NSApp.terminate(nil)
+            return
+        }
         setupModelContainer()
         setupStatusItem()
         setupPanelController()
@@ -63,10 +68,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // MARK: - Setup
 
     private func setupModelContainer() {
+        let schema = Schema([ClipboardItem.self])
+        let migrated = HistoryStoreLocation.migrateLegacyStoreIfNeeded()
         do {
-            let schema = Schema([ClipboardItem.self])
-            let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-            let container = try ModelContainer(for: schema, configurations: [config])
+            let container: ModelContainer
+            do {
+                container = try Self.makeContainer(schema: schema)
+            } catch where migrated {
+                // The shared default.store may hold another app's schema; start fresh
+                // rather than refusing to launch.
+                appLogger.error("Copied legacy store did not open, starting empty: \(String(describing: error), privacy: .public)")
+                HistoryStoreLocation.removeStore()
+                container = try Self.makeContainer(schema: schema)
+            }
             modelContainer = container
             historyStore = HistoryStore(context: container.mainContext, limit: settings.maxItems)
         } catch {
@@ -79,6 +93,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             alert.runModal()
             NSApp.terminate(nil)
         }
+    }
+
+    private static func makeContainer(schema: Schema) throws -> ModelContainer {
+        let config = ModelConfiguration(schema: schema, url: HistoryStoreLocation.url)
+        return try ModelContainer(for: schema, configurations: [config])
+    }
+
+    /// Two copies writing one SQLite store can corrupt it (e.g. relaunching from Spotlight
+    /// while an older copy still runs in the menu bar), so a second launch quits.
+    private func isAnotherInstanceRunning() -> Bool {
+        // Unit tests run inside the app (TEST_HOST) and must not quit when the installed app is open.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              let bundleID = Bundle.main.bundleIdentifier else { return false }
+        let current = NSRunningApplication.current
+        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .contains { $0.processIdentifier != current.processIdentifier && !$0.isTerminated }
     }
 
     private func setupStatusItem() {
@@ -106,6 +136,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
         updateItem.target = updateController
         menu.addItem(updateItem)
+
+        let diagnosticsItem = NSMenuItem(
+            title: String(localized: "Export Diagnostics"),
+            action: #selector(exportDiagnostics),
+            keyEquivalent: ""
+        )
+        diagnosticsItem.target = self
+        menu.addItem(diagnosticsItem)
 
         let permissionItem = NSMenuItem(
             title: String(localized: "Accessibility Permission"),
@@ -432,6 +470,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         settingsWindow = win
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
+    }
+
+    /// Writes a report to the Desktop and reveals it, so users can attach it to a bug report.
+    @objc private func exportDiagnostics() {
+        let sections = DiagnosticsExporter.Sections(
+            store: historyStore?.diagnosticsSummary ?? "historyStore=nil",
+            monitor: clipboardMonitor?.diagnosticsSummary ?? "clipboardMonitor=nil",
+            screenshots: (screenshotWatcher?.diagnosticsSummary ?? "screenshotWatcher=nil")
+                + " captureScreenshots=\(settings.captureScreenshots)"
+        )
+        do {
+            let url = try DiagnosticsExporter.export(sections)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            appLogger.error("Export diagnostics failed: \(String(describing: error), privacy: .public)")
+            let alert = NSAlert(error: error)
+            alert.runModal()
+        }
     }
 
     @objc private func clearAll() {

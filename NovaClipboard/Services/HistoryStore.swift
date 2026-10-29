@@ -1,5 +1,8 @@
 import Foundation
 import SwiftData
+import os
+
+private let storeLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "HistoryStore")
 
 @MainActor
 final class HistoryStore {
@@ -20,13 +23,13 @@ final class HistoryStore {
             dup.sourceBundleID = item.sourceBundleID
             // Free up the new item's external image file (it was written eagerly by Monitor).
             ImageStore.deleteFile(at: item.imagePath)
-            try? context.save()
+            save()
             return dup
         }
 
         context.insert(item)
         evictOverflowIfNeeded()
-        try? context.save()
+        save()
         return item
     }
 
@@ -34,12 +37,12 @@ final class HistoryStore {
         ImageStore.deleteFile(at: item.imagePath)
         ImageThumbnailCache.shared.invalidate(id: item.id)
         context.delete(item)
-        try? context.save()
+        save()
     }
 
     func togglePin(_ item: ClipboardItem) {
         item.isPinned.toggle()
-        try? context.save()
+        save()
     }
 
     func clearAll(keepPinned: Bool = true) {
@@ -47,18 +50,18 @@ final class HistoryStore {
             ? #Predicate { !$0.isPinned }
             : nil
         let descriptor = FetchDescriptor<ClipboardItem>(predicate: predicate)
-        let items = (try? context.fetch(descriptor)) ?? []
+        let items = fetch(descriptor)
         for item in items {
             ImageStore.deleteFile(at: item.imagePath)
             ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
-        try? context.save()
+        save()
     }
 
     var isEmpty: Bool {
         let descriptor = FetchDescriptor<ClipboardItem>()
-        let count = (try? context.fetchCount(descriptor)) ?? 0
+        let count = fetchCount(descriptor)
         return count == 0
     }
 
@@ -66,7 +69,7 @@ final class HistoryStore {
         let descriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate { !$0.isPinned }
         )
-        let count = (try? context.fetchCount(descriptor)) ?? 0
+        let count = fetchCount(descriptor)
         return count > 0
     }
 
@@ -77,7 +80,7 @@ final class HistoryStore {
         if let limit {
             descriptor.fetchLimit = limit
         }
-        return (try? context.fetch(descriptor)) ?? []
+        return fetch(descriptor)
     }
 
     /// Dedup against the most-recent N items by checksum (Spec §3.2 / Plan Step 3.2).
@@ -91,7 +94,7 @@ final class HistoryStore {
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         descriptor.fetchLimit = dedupWindow
-        let recent = (try? context.fetch(descriptor)) ?? []
+        let recent = fetch(descriptor)
         return recent.first(where: { $0.checksum == checksum })
     }
 
@@ -99,7 +102,7 @@ final class HistoryStore {
         let countDescriptor = FetchDescriptor<ClipboardItem>(
             predicate: #Predicate { !$0.isPinned }
         )
-        let unpinnedCount = (try? context.fetchCount(countDescriptor)) ?? 0
+        let unpinnedCount = fetchCount(countDescriptor)
         guard unpinnedCount > limit else { return }
 
         var overflowDescriptor = FetchDescriptor<ClipboardItem>(
@@ -107,12 +110,58 @@ final class HistoryStore {
             sortBy: [SortDescriptor(\.createdAt, order: .forward)]
         )
         overflowDescriptor.fetchLimit = unpinnedCount - limit
-        let overflow = (try? context.fetch(overflowDescriptor)) ?? []
+        let overflow = fetch(overflowDescriptor)
         for item in overflow {
             ImageStore.deleteFile(at: item.imagePath)
             ImageThumbnailCache.shared.invalidate(id: item.id)
             context.delete(item)
         }
-        try? context.save()
+        save()
+    }
+
+    /// Probes the store for Export Diagnostics, reporting the error instead of hiding it.
+    var diagnosticsSummary: String {
+        do {
+            let total = try context.fetchCount(FetchDescriptor<ClipboardItem>())
+            var newest = FetchDescriptor<ClipboardItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+            newest.fetchLimit = 1
+            let newestDate = try context.fetch(newest).first.map { ISO8601DateFormatter().string(from: $0.createdAt) } ?? "none"
+            return "fetch=ok items=\(total) newestItemAt=\(newestDate) unsavedChanges=\(context.hasChanges)"
+        } catch {
+            return "fetch=FAILED error=\(String(describing: error))"
+        }
+    }
+
+    // MARK: - Error-reporting wrappers
+    //
+    // SwiftData errors used to be swallowed with `try?`, which hid a store that had gone bad
+    // under a running app: every fetch/save failed silently, so new copies never showed up.
+
+    private func save() {
+        do {
+            try context.save()
+        } catch {
+            storeLogger.error("Save failed: \(String(describing: error), privacy: .public)")
+            // Drop the unsaved changes so one bad save doesn't make every later save fail too.
+            context.rollback()
+        }
+    }
+
+    private func fetch<T: PersistentModel>(_ descriptor: FetchDescriptor<T>) -> [T] {
+        do {
+            return try context.fetch(descriptor)
+        } catch {
+            storeLogger.error("Fetch failed: \(String(describing: error), privacy: .public)")
+            return []
+        }
+    }
+
+    private func fetchCount<T: PersistentModel>(_ descriptor: FetchDescriptor<T>) -> Int {
+        do {
+            return try context.fetchCount(descriptor)
+        } catch {
+            storeLogger.error("Fetch count failed: \(String(describing: error), privacy: .public)")
+            return 0
+        }
     }
 }

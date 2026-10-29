@@ -47,6 +47,58 @@ final class ClipboardMonitorTests: XCTestCase {
         XCTAssertEqual(fired, 0, "concealed UTI should suppress capture")
     }
 
+    /// Spreadsheets put a rendered picture of the cells next to their text.
+    func testPrefersTextOverImage() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+
+        let monitor = ClipboardMonitor(pasteboard: pasteboard, pollInterval: 0.05)
+        var received: [ClipboardItem] = []
+        monitor.onNewItem = { received.append($0) }
+
+        pasteboard.clearContents()
+        let item = NSPasteboardItem()
+        item.setData(Self.pngData(), forType: NSPasteboard.PasteboardType("public.png"))
+        item.setString("cell value", forType: .string)
+        pasteboard.writeObjects([item])
+        monitor.pollNow()
+
+        XCTAssertEqual(received.count, 1)
+        XCTAssertEqual(received.first?.type, .text)
+        XCTAssertEqual(received.first?.contentText, "cell value")
+    }
+
+    /// A browser's "Copy Image" can carry the image URL as text; the image wins.
+    func testPrefersImageOverLink() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+
+        let monitor = ClipboardMonitor(pasteboard: pasteboard, pollInterval: 0.05)
+        let exp = expectation(description: "onNewItem fires")
+        monitor.onNewItem = { item in
+            XCTAssertEqual(item.type, .image)
+            exp.fulfill()
+        }
+
+        pasteboard.clearContents()
+        let item = NSPasteboardItem()
+        item.setData(Self.pngData(), forType: NSPasteboard.PasteboardType("public.png"))
+        item.setString("https://example.com/photo.png", forType: .string)
+        pasteboard.writeObjects([item])
+        monitor.pollNow()
+
+        wait(for: [exp], timeout: 2.0)
+    }
+
+    private static func pngData() -> Data {
+        let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8,
+            samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        )!
+        return rep.representation(using: .png, properties: [:])!
+    }
+
     func testIgnoresSameContent() {
         let pasteboard = NSPasteboard.withUniqueName()
         defer { pasteboard.releaseGlobally() }
