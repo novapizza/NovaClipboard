@@ -74,6 +74,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             let container: ModelContainer
             do {
                 container = try Self.makeContainer(schema: schema)
+                // Free the old shared store only once the copy opened, and before anything
+                // writes to the new one, so the item counts can still be compared.
+                if migrated, let opened = try? container.mainContext.fetchCount(FetchDescriptor<ClipboardItem>()) {
+                    HistoryStoreLocation.retireLegacyStoreIfSafe(openedItemCount: opened)
+                }
             } catch where migrated {
                 // The shared default.store may hold another app's schema; start fresh
                 // rather than refusing to launch.
