@@ -20,6 +20,8 @@ final class ClipboardMonitor {
     private let pollInterval: TimeInterval
     private var timer: Timer?
     private var lastChangeCount: Int
+    /// When the pasteboard last changed under a running poll; surfaced by Export Diagnostics.
+    private(set) var lastChangeAt: Date?
 
     /// Background queue for hashing and disk writes so large images don't block the 300ms poll
     /// or the main thread that owns SwiftData.
@@ -29,6 +31,9 @@ final class ClipboardMonitor {
     )
 
     var onNewItem: ((ClipboardItem) -> Void)?
+    /// Largest image (in PNG bytes) to record; read on the main thread per copy so a
+    /// settings change applies to the next copy. Mirrors the screenshot cap.
+    var maxImageBytes: () -> Int = { .max }
 
     init(pasteboard: NSPasteboard = .general, pollInterval: TimeInterval = 0.3) {
         self.pasteboard = pasteboard
@@ -50,6 +55,14 @@ final class ClipboardMonitor {
         timer = nil
     }
 
+    var isRunning: Bool { timer?.isValid ?? false }
+
+    /// One-line state for Export Diagnostics.
+    var diagnosticsSummary: String {
+        let last = lastChangeAt.map { ISO8601DateFormatter().string(from: $0) } ?? "never"
+        return "running=\(isRunning) lastChangeCount=\(lastChangeCount) currentChangeCount=\(pasteboard.changeCount) lastChangeAt=\(last)"
+    }
+
     /// Test-only hook: drives one poll cycle without waiting for the timer.
     func pollNow() {
         poll()
@@ -59,29 +72,40 @@ final class ClipboardMonitor {
         let current = pasteboard.changeCount
         guard current != lastChangeCount else { return }
         lastChangeCount = current
+        lastChangeAt = Date()
         handleChange()
     }
 
     private func handleChange() {
         let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        // Types and source only — never the contents, so logs are safe to share.
+        let types = pasteboard.types?.map(\.rawValue).joined(separator: ",") ?? "none"
+        monitorLogger.info("Pasteboard changed (count=\(self.lastChangeCount, privacy: .public)) from \(bundleID ?? "unknown", privacy: .public), types=\(types, privacy: .public)")
 
         if hasConcealedType() {
             monitorLogger.info("Skipping change: pasteboard advertises concealed UTI")
             return
         }
 
-        // Priority: file URL > image > text/link
+        // Priority: file URL > text > image > link. Spreadsheets (Excel, Numbers, Google
+        // Sheets) put a rendered picture of the cells next to their text, and the text is
+        // what the user copied. A browser's "Copy Image" can carry the image's URL as text,
+        // so a bare link doesn't beat an image.
         if let fileItem = readFileURLs(bundleID: bundleID) {
             onNewItem?(fileItem)
+            return
+        }
+        let textItem = readText(bundleID: bundleID)
+        if let textItem, textItem.type != .link {
+            onNewItem?(textItem)
             return
         }
         if let image = readImageData() {
             processImageAsync(image: image, bundleID: bundleID)
             return
         }
-        if let textItem = readText(bundleID: bundleID) {
+        if let textItem {
             onNewItem?(textItem)
-            return
         }
     }
 
@@ -133,6 +157,12 @@ final class ClipboardMonitor {
         // Stamp the copy time now: text/file items are delivered synchronously from poll(),
         // so an item created after the async hop would sort below content copied later.
         let copiedAt = Date()
+        let limit = maxImageBytes()
+        // A PNG is stored as-is, so an oversized one can be dropped before any work.
+        if !image.isTIFF, image.data.count > limit {
+            monitorLogger.info("Skipping image: \(image.data.count, privacy: .public) bytes exceeds the \(limit, privacy: .public)-byte limit")
+            return
+        }
         processingQueue.async { [weak self] in
             // Normalize to PNG before hashing so dedup matches PNG copies of the same image.
             let data: Data
@@ -142,6 +172,11 @@ final class ClipboardMonitor {
                 data = png
             } else {
                 data = image.data
+            }
+            // TIFF is uncompressed, so only its PNG size can be compared with the limit.
+            guard data.count <= limit else {
+                monitorLogger.info("Skipping image: \(data.count, privacy: .public) bytes exceeds the \(limit, privacy: .public)-byte limit")
+                return
             }
 
             let id = UUID()

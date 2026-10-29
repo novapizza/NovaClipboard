@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let hotKeyManager = HotKeyManager()
     private let anchorResolver = PanelAnchorResolver()
     private let pasteEngine = PasteEngine()
+    /// Screenshot decoding, hashing and disk writes, kept off the main thread.
+    private let screenshotQueue = DispatchQueue(label: "io.haunc.NovaClipboard.screenshots", qos: .utility)
     private var panelController: PanelController?
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
@@ -31,6 +33,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         appLogger.info("NovaClipboard launching, phase-2 build")
+        if isAnotherInstanceRunning() {
+            appLogger.error("Another NovaClipboard instance is already running; quitting")
+            NSApp.terminate(nil)
+            return
+        }
         setupModelContainer()
         setupStatusItem()
         setupPanelController()
@@ -63,10 +70,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // MARK: - Setup
 
     private func setupModelContainer() {
+        let schema = Schema([ClipboardItem.self])
+        let migrated = HistoryStoreLocation.migrateLegacyStoreIfNeeded()
         do {
-            let schema = Schema([ClipboardItem.self])
-            let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-            let container = try ModelContainer(for: schema, configurations: [config])
+            let container: ModelContainer
+            do {
+                container = try Self.makeContainer(schema: schema)
+                // Free the old shared store only once the copy opened, and before anything
+                // writes to the new one, so the item counts can still be compared.
+                if migrated, let opened = try? container.mainContext.fetchCount(FetchDescriptor<ClipboardItem>()) {
+                    HistoryStoreLocation.retireLegacyStoreIfSafe(openedItemCount: opened)
+                }
+            } catch where migrated {
+                // The shared default.store may hold another app's schema; start fresh
+                // rather than refusing to launch.
+                appLogger.error("Copied legacy store did not open, starting empty: \(String(describing: error), privacy: .public)")
+                HistoryStoreLocation.removeStore()
+                container = try Self.makeContainer(schema: schema)
+            }
             modelContainer = container
             historyStore = HistoryStore(context: container.mainContext, limit: settings.maxItems)
         } catch {
@@ -79,6 +100,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             alert.runModal()
             NSApp.terminate(nil)
         }
+    }
+
+    private static func makeContainer(schema: Schema) throws -> ModelContainer {
+        let config = ModelConfiguration(schema: schema, url: HistoryStoreLocation.url)
+        return try ModelContainer(for: schema, configurations: [config])
+    }
+
+    /// Two copies writing one SQLite store can corrupt it (e.g. relaunching from Spotlight
+    /// while an older copy still runs in the menu bar), so a second launch quits.
+    private func isAnotherInstanceRunning() -> Bool {
+        // Unit tests run inside the app (TEST_HOST) and must not quit when the installed app is open.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              let bundleID = Bundle.main.bundleIdentifier else { return false }
+        let current = NSRunningApplication.current
+        return NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .contains { $0.processIdentifier != current.processIdentifier && !$0.isTerminated }
     }
 
     private func setupStatusItem() {
@@ -106,6 +143,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
         updateItem.target = updateController
         menu.addItem(updateItem)
+
+        let diagnosticsItem = NSMenuItem(
+            title: String(localized: "Export Diagnostics"),
+            action: #selector(exportDiagnostics),
+            keyEquivalent: ""
+        )
+        diagnosticsItem.target = self
+        menu.addItem(diagnosticsItem)
 
         let permissionItem = NSMenuItem(
             title: String(localized: "Accessibility Permission"),
@@ -188,6 +233,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 self.historyStore?.insert(item)
             }
         }
+        monitor.maxImageBytes = { [weak self] in
+            MainActor.assumeIsolated { (self?.settings.maxImageMB ?? 4) * 1_024 * 1_024 }
+        }
         monitor.start()
         clipboardMonitor = monitor
     }
@@ -205,23 +253,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    /// Reads, hashes and stores a screenshot off the main thread (a 5K capture is several MB),
+    /// then inserts it on the main thread, which owns SwiftData.
     private func ingestScreenshot(at url: URL) {
-        guard let data = try? Data(contentsOf: url) else {
-            appLogger.error("Could not read screenshot data at \(url.path, privacy: .public)")
-            return
-        }
-
         // Cap by the same MB limit users set for clipboard images.
         let limitBytes = settings.maxImageMB * 1_024 * 1_024
+        let copyToClipboard = settings.copyScreenshotToClipboard
+
+        screenshotQueue.async { [weak self] in
+            guard let prepared = Self.prepareScreenshot(at: url, limitBytes: limitBytes, forClipboard: copyToClipboard) else { return }
+            DispatchQueue.main.async {
+                guard let self else {
+                    ImageStore.deleteFile(at: prepared.item.imagePath)
+                    return
+                }
+                self.historyStore?.insert(prepared.item)
+                appLogger.info("Inserted screenshot into history: \(url.lastPathComponent, privacy: .public)")
+
+                // macOS's ⌘⇧3/4/5 write the screenshot to a file, never to the pasteboard, so ⌘V
+                // can't paste what was just captured. Mirror it onto the clipboard here so the user
+                // can paste immediately. `ClipboardMonitor` will re-detect this write, but dedup by
+                // checksum collapses it back onto the row we just inserted.
+                if let clipboard = prepared.clipboard {
+                    Self.copyImageToClipboard(png: clipboard.png, tiff: clipboard.tiff)
+                }
+            }
+        }
+    }
+
+    private struct PreparedScreenshot {
+        let item: ClipboardItem
+        let clipboard: (png: Data, tiff: Data?)?
+    }
+
+    /// Runs on `screenshotQueue`: everything expensive about a screenshot happens here.
+    nonisolated private static func prepareScreenshot(at url: URL, limitBytes: Int, forClipboard: Bool) -> PreparedScreenshot? {
+        guard let data = try? Data(contentsOf: url) else {
+            appLogger.error("Could not read screenshot data at \(url.path, privacy: .public)")
+            return nil
+        }
         guard data.count <= limitBytes else {
             appLogger.info("Skipping screenshot, exceeds maxImageMB limit")
-            return
+            return nil
         }
 
-        // Normalize to PNG (screenshots are PNG by default, but be defensive).
+        // Screenshots are PNG by default; only other formats (`screencapture type`) need re-encoding.
         let pngData: Data
-        if let rep = NSBitmapImageRep(data: data),
-           let normalized = rep.representation(using: .png, properties: [:]) {
+        if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) {
+            pngData = data
+        } else if let rep = NSBitmapImageRep(data: data),
+                  let normalized = rep.representation(using: .png, properties: [:]) {
             pngData = normalized
         } else {
             pngData = data
@@ -245,26 +326,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             sourceBundleID: "com.apple.screencapture",
             checksum: Checksum.sha256(pngData)
         )
-
-        historyStore?.insert(item)
-        appLogger.info("Inserted screenshot into history: \(url.lastPathComponent, privacy: .public)")
-
-        // macOS's ⌘⇧3/4/5 write the screenshot to a file, never to the pasteboard, so ⌘V
-        // can't paste what was just captured. Mirror it onto the clipboard here so the user
-        // can paste immediately. `ClipboardMonitor` will re-detect this write, but dedup by
-        // checksum collapses it back onto the row we just inserted.
-        if settings.copyScreenshotToClipboard {
-            copyImageToClipboard(pngData)
-        }
+        // TIFF is for apps that only read the legacy type; it's uncompressed and slow to build.
+        let clipboard = forClipboard ? (png: pngData, tiff: NSBitmapImageRep(data: pngData)?.tiffRepresentation) : nil
+        return PreparedScreenshot(item: item, clipboard: clipboard)
     }
 
-    /// Writes PNG (plus a TIFF fallback for legacy consumers) onto the general pasteboard.
-    private func copyImageToClipboard(_ pngData: Data) {
+    private static func copyImageToClipboard(png: Data, tiff: Data?) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setData(pngData, forType: NSPasteboard.PasteboardType("public.png"))
-        if let rep = NSBitmapImageRep(data: pngData),
-           let tiff = rep.tiffRepresentation {
+        pasteboard.setData(png, forType: NSPasteboard.PasteboardType("public.png"))
+        if let tiff {
             pasteboard.setData(tiff, forType: NSPasteboard.PasteboardType("public.tiff"))
         }
     }
@@ -432,6 +503,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         settingsWindow = win
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
+    }
+
+    /// Writes a report to the Desktop and reveals it, so users can attach it to a bug report.
+    @objc private func exportDiagnostics() {
+        let sections = DiagnosticsExporter.Sections(
+            store: historyStore?.diagnosticsSummary ?? "historyStore=nil",
+            monitor: clipboardMonitor?.diagnosticsSummary ?? "clipboardMonitor=nil",
+            screenshots: (screenshotWatcher?.diagnosticsSummary ?? "screenshotWatcher=nil")
+                + " captureScreenshots=\(settings.captureScreenshots)"
+        )
+        do {
+            let url = try DiagnosticsExporter.export(sections)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            appLogger.error("Export diagnostics failed: \(String(describing: error), privacy: .public)")
+            let alert = NSAlert(error: error)
+            alert.runModal()
+        }
     }
 
     @objc private func clearAll() {

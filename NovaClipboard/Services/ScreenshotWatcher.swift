@@ -1,6 +1,7 @@
 import AppKit
 import CoreServices
 import Foundation
+import ImageIO
 import os
 
 private let screenshotLogger = Logger(subsystem: "io.haunc.NovaClipboard", category: "ScreenshotWatcher")
@@ -19,6 +20,9 @@ final class ScreenshotWatcher {
     private var watchedPath: String?
     private var startTime: Date = .distantFuture
     private var seenPaths: Set<String> = []
+    /// Paths waiting on `deliverWhenReadable`, so the create/modify/rename events FSEvents
+    /// fires for one screenshot don't start several checks of the same file.
+    private var pendingPaths: Set<String> = []
 
     /// Fires on the main thread with the screenshot file URL.
     var onScreenshot: ((URL) -> Void)?
@@ -85,6 +89,11 @@ final class ScreenshotWatcher {
         screenshotLogger.info("ScreenshotWatcher started on \(path, privacy: .public)")
     }
 
+    /// One-line state for Export Diagnostics.
+    var diagnosticsSummary: String {
+        "running=\(stream != nil) watchedPath=\(watchedPath ?? "none") resolvedDirectory=\(Self.screenshotDirectory())"
+    }
+
     func stop() {
         if let stream {
             FSEventStreamStop(stream)
@@ -93,11 +102,15 @@ final class ScreenshotWatcher {
         }
         stream = nil
         seenPaths.removeAll()
+        pendingPaths.removeAll()
         watchedPath = nil
     }
 
     private func consider(path: String) {
-        guard !seenPaths.contains(path) else { return }
+        guard !seenPaths.contains(path), !pendingPaths.contains(path) else { return }
+        // screencaptureui writes to a hidden temp file and renames it into place; only the
+        // final file matters.
+        guard !(path as NSString).lastPathComponent.hasPrefix(".") else { return }
         let ext = (path as NSString).pathExtension.lowercased()
         guard ["png", "jpg", "jpeg", "heic", "heif", "tiff", "pdf"].contains(ext) else { return }
         guard FileManager.default.fileExists(atPath: path) else { return }
@@ -108,9 +121,7 @@ final class ScreenshotWatcher {
             return
         }
 
-        guard isScreenshot(path: path) else { return }
-        recordSeen(path)
-        screenshotLogger.info("Detected screenshot: \(path, privacy: .public)")
+        pendingPaths.insert(path)
         deliverWhenReadable(url: URL(fileURLWithPath: path), attempt: 0)
     }
 
@@ -121,30 +132,62 @@ final class ScreenshotWatcher {
         seenPaths.insert(path)
     }
 
-    private func isScreenshot(path: String) -> Bool {
+    /// Classifies a fully written file. The filename alone can't be trusted: macOS localizes
+    /// it ("Bildschirmfoto …" in German) and users can rename it via `defaults`, and Spotlight
+    /// usually hasn't indexed a brand-new file yet. The EXIF comment is written into the file
+    /// itself, so it is checked last as the language-independent fallback.
+    static func isScreenshot(path: String) -> Bool {
         if let item = MDItemCreate(kCFAllocatorDefault, path as CFString),
-           let raw = MDItemCopyAttribute(item, "kMDItemIsScreenCapture" as CFString) {
-            if let n = raw as? NSNumber, n.boolValue {
-                return true
-            }
+           let raw = MDItemCopyAttribute(item, "kMDItemIsScreenCapture" as CFString),
+           let n = raw as? NSNumber, n.boolValue {
+            return true
         }
-        // Spotlight may not have indexed the new file yet — fall back to filename heuristic.
         let name = ((path as NSString).lastPathComponent).lowercased()
-        // macOS default localized filenames begin with "screenshot" or older "screen shot".
-        return name.hasPrefix("screenshot") || name.hasPrefix("screen shot")
+        if screenshotNamePrefixes().contains(where: { name.hasPrefix($0) }) {
+            return true
+        }
+        return hasScreenshotComment(path: path)
+    }
+
+    /// English defaults plus a custom prefix set with `defaults write com.apple.screencapture name`.
+    private static func screenshotNamePrefixes() -> [String] {
+        var prefixes = ["screenshot", "screen shot"]
+        if let custom = UserDefaults(suiteName: "com.apple.screencapture")?.string(forKey: "name"),
+           !custom.isEmpty {
+            prefixes.append(custom.lowercased())
+        }
+        return prefixes
+    }
+
+    /// `screencapture` stamps EXIF UserComment "Screenshot" into every capture.
+    private static func hasScreenshotComment(path: String) -> Bool {
+        guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any],
+              let comment = exif[kCGImagePropertyExifUserComment] as? String else {
+            return false
+        }
+        return comment.caseInsensitiveCompare("Screenshot") == .orderedSame
     }
 
     /// FSEvents fires on `IT_CREATED` immediately; the file may still be growing.
-    /// Poll briefly until the file is non-empty before handing off.
+    /// Poll briefly until the file is non-empty, then classify it and hand it off.
+    /// A file that isn't a screenshot stays out of `seenPaths`, so a later event for it
+    /// (e.g. once Spotlight has indexed it) gets another look.
     private func deliverWhenReadable(url: URL, attempt: Int) {
         let size = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? NSNumber)?.intValue ?? 0
         if size > 0 {
+            pendingPaths.remove(url.path)
+            guard Self.isScreenshot(path: url.path) else { return }
+            recordSeen(url.path)
+            screenshotLogger.info("Detected screenshot: \(url.path, privacy: .public)")
             DispatchQueue.main.async { [weak self] in
                 self?.onScreenshot?(url)
             }
             return
         }
         if attempt >= 15 {
+            pendingPaths.remove(url.path)
             screenshotLogger.error("Screenshot file never became readable: \(url.path, privacy: .public)")
             return
         }
