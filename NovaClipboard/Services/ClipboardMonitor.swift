@@ -31,6 +31,9 @@ final class ClipboardMonitor {
     )
 
     var onNewItem: ((ClipboardItem) -> Void)?
+    /// Largest image (in PNG bytes) to record; read on the main thread per copy so a
+    /// settings change applies to the next copy. Mirrors the screenshot cap.
+    var maxImageBytes: () -> Int = { .max }
 
     init(pasteboard: NSPasteboard = .general, pollInterval: TimeInterval = 0.3) {
         self.pasteboard = pasteboard
@@ -154,6 +157,12 @@ final class ClipboardMonitor {
         // Stamp the copy time now: text/file items are delivered synchronously from poll(),
         // so an item created after the async hop would sort below content copied later.
         let copiedAt = Date()
+        let limit = maxImageBytes()
+        // A PNG is stored as-is, so an oversized one can be dropped before any work.
+        if !image.isTIFF, image.data.count > limit {
+            monitorLogger.info("Skipping image: \(image.data.count, privacy: .public) bytes exceeds the \(limit, privacy: .public)-byte limit")
+            return
+        }
         processingQueue.async { [weak self] in
             // Normalize to PNG before hashing so dedup matches PNG copies of the same image.
             let data: Data
@@ -163,6 +172,11 @@ final class ClipboardMonitor {
                 data = png
             } else {
                 data = image.data
+            }
+            // TIFF is uncompressed, so only its PNG size can be compared with the limit.
+            guard data.count <= limit else {
+                monitorLogger.info("Skipping image: \(data.count, privacy: .public) bytes exceeds the \(limit, privacy: .public)-byte limit")
+                return
             }
 
             let id = UUID()

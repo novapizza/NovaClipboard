@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let hotKeyManager = HotKeyManager()
     private let anchorResolver = PanelAnchorResolver()
     private let pasteEngine = PasteEngine()
+    /// Screenshot decoding, hashing and disk writes, kept off the main thread.
+    private let screenshotQueue = DispatchQueue(label: "io.haunc.NovaClipboard.screenshots", qos: .utility)
     private var panelController: PanelController?
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
@@ -231,6 +233,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 self.historyStore?.insert(item)
             }
         }
+        monitor.maxImageBytes = { [weak self] in
+            MainActor.assumeIsolated { (self?.settings.maxImageMB ?? 4) * 1_024 * 1_024 }
+        }
         monitor.start()
         clipboardMonitor = monitor
     }
@@ -248,23 +253,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    /// Reads, hashes and stores a screenshot off the main thread (a 5K capture is several MB),
+    /// then inserts it on the main thread, which owns SwiftData.
     private func ingestScreenshot(at url: URL) {
-        guard let data = try? Data(contentsOf: url) else {
-            appLogger.error("Could not read screenshot data at \(url.path, privacy: .public)")
-            return
-        }
-
         // Cap by the same MB limit users set for clipboard images.
         let limitBytes = settings.maxImageMB * 1_024 * 1_024
+        let copyToClipboard = settings.copyScreenshotToClipboard
+
+        screenshotQueue.async { [weak self] in
+            guard let prepared = Self.prepareScreenshot(at: url, limitBytes: limitBytes, forClipboard: copyToClipboard) else { return }
+            DispatchQueue.main.async {
+                guard let self else {
+                    ImageStore.deleteFile(at: prepared.item.imagePath)
+                    return
+                }
+                self.historyStore?.insert(prepared.item)
+                appLogger.info("Inserted screenshot into history: \(url.lastPathComponent, privacy: .public)")
+
+                // macOS's ⌘⇧3/4/5 write the screenshot to a file, never to the pasteboard, so ⌘V
+                // can't paste what was just captured. Mirror it onto the clipboard here so the user
+                // can paste immediately. `ClipboardMonitor` will re-detect this write, but dedup by
+                // checksum collapses it back onto the row we just inserted.
+                if let clipboard = prepared.clipboard {
+                    Self.copyImageToClipboard(png: clipboard.png, tiff: clipboard.tiff)
+                }
+            }
+        }
+    }
+
+    private struct PreparedScreenshot {
+        let item: ClipboardItem
+        let clipboard: (png: Data, tiff: Data?)?
+    }
+
+    /// Runs on `screenshotQueue`: everything expensive about a screenshot happens here.
+    nonisolated private static func prepareScreenshot(at url: URL, limitBytes: Int, forClipboard: Bool) -> PreparedScreenshot? {
+        guard let data = try? Data(contentsOf: url) else {
+            appLogger.error("Could not read screenshot data at \(url.path, privacy: .public)")
+            return nil
+        }
         guard data.count <= limitBytes else {
             appLogger.info("Skipping screenshot, exceeds maxImageMB limit")
-            return
+            return nil
         }
 
-        // Normalize to PNG (screenshots are PNG by default, but be defensive).
+        // Screenshots are PNG by default; only other formats (`screencapture type`) need re-encoding.
         let pngData: Data
-        if let rep = NSBitmapImageRep(data: data),
-           let normalized = rep.representation(using: .png, properties: [:]) {
+        if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) {
+            pngData = data
+        } else if let rep = NSBitmapImageRep(data: data),
+                  let normalized = rep.representation(using: .png, properties: [:]) {
             pngData = normalized
         } else {
             pngData = data
@@ -288,26 +326,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             sourceBundleID: "com.apple.screencapture",
             checksum: Checksum.sha256(pngData)
         )
-
-        historyStore?.insert(item)
-        appLogger.info("Inserted screenshot into history: \(url.lastPathComponent, privacy: .public)")
-
-        // macOS's ⌘⇧3/4/5 write the screenshot to a file, never to the pasteboard, so ⌘V
-        // can't paste what was just captured. Mirror it onto the clipboard here so the user
-        // can paste immediately. `ClipboardMonitor` will re-detect this write, but dedup by
-        // checksum collapses it back onto the row we just inserted.
-        if settings.copyScreenshotToClipboard {
-            copyImageToClipboard(pngData)
-        }
+        // TIFF is for apps that only read the legacy type; it's uncompressed and slow to build.
+        let clipboard = forClipboard ? (png: pngData, tiff: NSBitmapImageRep(data: pngData)?.tiffRepresentation) : nil
+        return PreparedScreenshot(item: item, clipboard: clipboard)
     }
 
-    /// Writes PNG (plus a TIFF fallback for legacy consumers) onto the general pasteboard.
-    private func copyImageToClipboard(_ pngData: Data) {
+    private static func copyImageToClipboard(png: Data, tiff: Data?) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setData(pngData, forType: NSPasteboard.PasteboardType("public.png"))
-        if let rep = NSBitmapImageRep(data: pngData),
-           let tiff = rep.tiffRepresentation {
+        pasteboard.setData(png, forType: NSPasteboard.PasteboardType("public.png"))
+        if let tiff {
             pasteboard.setData(tiff, forType: NSPasteboard.PasteboardType("public.tiff"))
         }
     }
