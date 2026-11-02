@@ -424,6 +424,7 @@
 		06B2EC246F9623DAB2939090 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_SUPPORT_FOLDER = "NovaClipboard-Debug";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -434,8 +435,9 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = io.haunc.NovaClipboard;
-				PRODUCT_NAME = NovaClipboard;
+				PRODUCT_BUNDLE_IDENTIFIER = io.haunc.NovaClipboard.debug;
+				PRODUCT_MODULE_NAME = NovaClipboard;
+				PRODUCT_NAME = "NovaClipboard Dev";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -461,6 +463,7 @@
 		84697B7121732463CE54A616 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_SUPPORT_FOLDER = NovaClipboard;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -472,6 +475,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.haunc.NovaClipboard;
+				PRODUCT_MODULE_NAME = NovaClipboard;
 				PRODUCT_NAME = NovaClipboard;
 				SDKROOT = macosx;
 			};
@@ -620,7 +624,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.haunc.NovaClipboardTests;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NovaClipboard.app/Contents/MacOS/NovaClipboard";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NovaClipboard Dev.app/Contents/MacOS/NovaClipboard Dev";
 			};
 			name = Debug;
 		};

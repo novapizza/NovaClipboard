@@ -23,12 +23,20 @@ enum HistoryStoreLocation {
     /// Entity names in `Z_PRIMARYKEY`: ours plus the persistent-history entities.
     private static let ownEntities: Set<String> = ["ClipboardItem", "CHANGE", "TRANSACTION", "TRANSACTIONSTRING"]
 
-    static var url: URL {
-        let dir = applicationSupportDirectory.appendingPathComponent("NovaClipboard", isDirectory: true)
+    /// The app's own folder in Application Support, shared with `ImageStore`. Debug builds
+    /// use a different name (`NovaAppSupportFolder` in Info.plist, from `project.yml`) so
+    /// they never open the release build's history.
+    static var appDirectory: URL {
+        let name = Bundle.main.object(forInfoDictionaryKey: "NovaAppSupportFolder") as? String ?? "NovaClipboard"
+        let dir = applicationSupportDirectory.appendingPathComponent(name, isDirectory: true)
         if !FileManager.default.fileExists(atPath: dir.path) {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-        return dir.appendingPathComponent("History.store")
+        return dir
+    }
+
+    static var url: URL {
+        appDirectory.appendingPathComponent("History.store")
     }
 
     static var legacyURL: URL {

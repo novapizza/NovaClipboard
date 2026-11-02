@@ -46,6 +46,18 @@ targets:
         # Local builds sign ad-hoc ("Sign to Run Locally") so no team is needed.
         # CI overrides signing with Developer ID at archive time.
         CODE_SIGN_IDENTITY[sdk=macosx*]: "-"
+        # Fixed so a renamed product (Debug) still builds the module tests import.
+        PRODUCT_MODULE_NAME: NovaClipboard
+        APP_SUPPORT_FOLDER: NovaClipboard
+      # Debug builds are a separate app to macOS: their own bundle ID (so their own
+      # Accessibility grant and UserDefaults), their own Application Support folder, and
+      # their own name — System Settings lists apps by bundle name, not display name —
+      # so running one never resets or touches the installed release build.
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: io.haunc.NovaClipboard.debug
+          PRODUCT_NAME: NovaClipboard Dev
+          APP_SUPPORT_FOLDER: NovaClipboard-Debug
 
   NovaClipboardTests:
     type: bundle.unit-test
@@ -61,6 +73,9 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         BUNDLE_LOADER: "$(TEST_HOST)"
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/NovaClipboard.app/Contents/MacOS/NovaClipboard"
+      configs:
+        Debug:
+          TEST_HOST: "$(BUILT_PRODUCTS_DIR)/NovaClipboard Dev.app/Contents/MacOS/NovaClipboard Dev"
 
 schemes:
   NovaClipboard:

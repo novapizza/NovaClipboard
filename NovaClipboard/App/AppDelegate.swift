@@ -71,7 +71,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private func setupModelContainer() {
         let schema = Schema([ClipboardItem.self])
+        #if DEBUG
+        // The legacy default.store belongs to the release build; a debug build copying and
+        // retiring it would leave the release build with an empty history.
+        let migrated = false
+        #else
         let migrated = HistoryStoreLocation.migrateLegacyStoreIfNeeded()
+        #endif
         do {
             let container: ModelContainer
             do {
