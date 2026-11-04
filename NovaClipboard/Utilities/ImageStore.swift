@@ -12,13 +12,7 @@ enum ImageStore {
 
     static var imagesDirectory: URL {
         let fm = FileManager.default
-        let base = (try? fm.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )) ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
-        let dir = base.appendingPathComponent("NovaClipboard/Images", isDirectory: true)
+        let dir = HistoryStoreLocation.appDirectory.appendingPathComponent("Images", isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }

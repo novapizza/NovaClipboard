@@ -23,6 +23,8 @@ final class PanelPresentation: ObservableObject {
     @Published var isAccessibilityTrusted: Bool = AXIsProcessTrusted()
     /// Bumped on every show so the long-lived view can reset per-show state.
     @Published var showCount: Int = 0
+    /// The app the panel will paste into, for previewing app-specific paste transforms.
+    @Published var targetBundleID: String?
 }
 
 @MainActor
@@ -38,7 +40,7 @@ final class PanelController {
     private let historyStore: HistoryStore
     private let anchorResolver: PanelAnchorResolver
     private let settings: AppSettings
-    private let onPaste: ([ClipboardItem]) -> Void
+    private let onPaste: ([ClipboardItem], Bool) -> Void
     private let onOpenSettings: () -> Void
     private let onOpenAccessibility: () -> Void
     private var panel: NSPanel?
@@ -48,6 +50,8 @@ final class PanelController {
     private var capturedApp: NSRunningApplication?
     private var lastHiddenAt: Date = .distantPast
     private let previewController = ItemPreviewController()
+    private let hoverPreview = HoverPreviewController()
+    private let transformPreview = PasteTransformPreview()
 
     let presentation = PanelPresentation()
 
@@ -58,7 +62,7 @@ final class PanelController {
         settings: AppSettings,
         onOpenSettings: @escaping () -> Void,
         onOpenAccessibility: @escaping () -> Void,
-        onPaste: @escaping ([ClipboardItem]) -> Void
+        onPaste: @escaping ([ClipboardItem], Bool) -> Void
     ) {
         self.modelContainer = modelContainer
         self.historyStore = historyStore
@@ -93,6 +97,7 @@ final class PanelController {
 
         presentation.isAccessibilityTrusted = AXIsProcessTrusted()
         presentation.showCount += 1
+        presentation.targetBundleID = capturedApp?.bundleIdentifier
 
         let anchor: PanelAnchor
         switch source {
@@ -119,6 +124,7 @@ final class PanelController {
 
     func hide() {
         guard let panel, panel.isVisible else { return }
+        hoverPreview.hide()
         previewController.close()
         panel.orderOut(nil)
         lastHiddenAt = Date()
@@ -140,11 +146,11 @@ final class PanelController {
     private func makePanel() -> NSPanel {
         let contentView = HistoryPanelView(
             store: historyStore,
-            onPaste: { [weak self] items in
+            onPaste: { [weak self] items, original in
                 guard let self else { return }
-                panelLogger.info("PanelController.onPaste from row click/enter, count=\(items.count, privacy: .public)")
+                panelLogger.info("PanelController.onPaste from row click/enter, count=\(items.count, privacy: .public), original=\(original, privacy: .public)")
                 self.hide()
-                self.onPaste(items)
+                self.onPaste(items, original)
             },
             // Esc closes an open Quick Look first, like Finder.
             onDismiss: { [weak self] in
@@ -155,9 +161,14 @@ final class PanelController {
                     self.hide()
                 }
             },
-            onTogglePreview: { [weak self] item in self?.previewController.toggle(item: item) },
+            onTogglePreview: { [weak self] item in
+                self?.hoverPreview.hide()
+                self?.previewController.toggle(item: item)
+            },
             onSelectionChanged: { [weak self] item in self?.previewController.selectionChanged(to: item) },
+            onHoverChanged: { [weak self] item in self?.hoverPreview.hoverChanged(to: item) },
             presentation: presentation,
+            transformPreview: transformPreview,
             // Settings activates the app; leave the `.floating` panel first so it
             // doesn't sit on top of the settings window.
             onOpenSettings: { [weak self] in
@@ -181,6 +192,15 @@ final class PanelController {
             defer: false
         )
         panel.previewController = previewController
+        previewController.hostWindow = panel
+        hoverPreview.hostWindow = panel
+        hoverPreview.isSuppressed = { [weak self] in self?.previewController.isVisible ?? false }
+        hoverPreview.transformResult = { [weak self] item in
+            guard let self else { return nil }
+            return self.transformPreview.result(
+                for: item, rules: self.settings.pasteTransforms, targetBundleID: self.presentation.targetBundleID
+            )
+        }
         panel.hasShadow = true
         panel.isFloatingPanel = true
         panel.level = .floating
@@ -214,11 +234,19 @@ final class PanelController {
             // Skip hide while a dialog owns focus, otherwise the dialog loses its
             // parent and the UI breaks. confirmationDialog is a window-attached sheet
             // (never sets NSApp.modalWindow), so check attachedSheet as well.
-            // Clicking into Quick Look (e.g. its full-screen button) moves key there; keep
-            // the history panel up so the preview keeps its controller.
-            if self?.previewController.isVisible == true { return }
             if NSApp.modalWindow != nil || self?.panel?.attachedSheet != nil { return }
-            self?.hide()
+            guard self?.previewController.isVisible == true else {
+                self?.hide()
+                return
+            }
+            // With Quick Look open, key may only be moving to the preview (opening it, or a
+            // click on its full-screen button); `ItemPreviewController` hands it back. The new
+            // key window is known once this resign finishes, so decide then.
+            DispatchQueue.main.async {
+                guard let self, let panel = self.panel, panel.isVisible, !panel.isKeyWindow,
+                      !self.previewController.isHoldingKeyTemporarily else { return }
+                self.hide()
+            }
         }
         return panel
     }

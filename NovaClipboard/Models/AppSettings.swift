@@ -28,6 +28,35 @@ enum RetentionPolicy: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// How long the mouse must rest on a history row before its hover card appears.
+enum HoverPreviewDelay: String, Codable, CaseIterable, Identifiable {
+    case off
+    case halfSecond
+    case oneSecond
+    case twoSeconds
+
+    var id: String { rawValue }
+
+    /// nil when hover cards are turned off.
+    var seconds: TimeInterval? {
+        switch self {
+        case .off: return nil
+        case .halfSecond: return 0.5
+        case .oneSecond: return 1
+        case .twoSeconds: return 2
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .off: return String(localized: "Off")
+        case .halfSecond: return String(localized: "0.5 s")
+        case .oneSecond: return String(localized: "1 s")
+        case .twoSeconds: return String(localized: "2 s")
+        }
+    }
+}
+
 /// UI language selection. `.system` follows the macOS language order; the other cases
 /// pin the app to a single language by overriding the app-domain `AppleLanguages` key.
 /// Changes take effect on the next launch (see `AppSettings.applyAppLanguage`).
@@ -164,6 +193,20 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(autoHidePanelChrome, forKey: Key.autoHidePanelChrome.rawValue) }
     }
 
+    /// Delay before the hover card with an item's full content appears (default 1 s).
+    @Published var hoverPreviewDelay: HoverPreviewDelay {
+        didSet { defaults.set(hoverPreviewDelay.rawValue, forKey: Key.hoverPreviewDelay.rawValue) }
+    }
+
+    /// Rules that rewrite text as it is pasted (`PasteTransformer`). Empty by default.
+    @Published var pasteTransforms: [PasteTransform] {
+        didSet {
+            if let data = try? JSONEncoder().encode(pasteTransforms) {
+                defaults.set(data, forKey: Key.pasteTransforms.rawValue)
+            }
+        }
+    }
+
     /// Carbon modifier mask prefixed to digits 1–9 for quick-paste (default ⌘⇧).
     @Published var quickPasteModifiers: UInt32 {
         didSet { defaults.set(Int(quickPasteModifiers), forKey: Key.quickPasteModifiers.rawValue) }
@@ -216,6 +259,10 @@ final class AppSettings: ObservableObject {
             .flatMap(AppLanguage.init(rawValue:))) ?? .system
         self.restoreClipboardAfterPaste = (defaults.object(forKey: Key.restoreClipboardAfterPaste.rawValue) as? Bool) ?? false
         self.autoHidePanelChrome = (defaults.object(forKey: Key.autoHidePanelChrome.rawValue) as? Bool) ?? false
+        self.hoverPreviewDelay = (defaults.string(forKey: Key.hoverPreviewDelay.rawValue)
+            .flatMap(HoverPreviewDelay.init(rawValue:))) ?? .oneSecond
+        self.pasteTransforms = defaults.data(forKey: Key.pasteTransforms.rawValue)
+            .flatMap { try? JSONDecoder().decode([PasteTransform].self, from: $0) } ?? []
 
         // First launch: persist default-true and register the login item so
         // the OS-level state matches the UI (didSet doesn't fire during init).
@@ -268,5 +315,7 @@ final class AppSettings: ObservableObject {
         case appLanguage
         case restoreClipboardAfterPaste
         case autoHidePanelChrome
+        case hoverPreviewDelay
+        case pasteTransforms
     }
 }

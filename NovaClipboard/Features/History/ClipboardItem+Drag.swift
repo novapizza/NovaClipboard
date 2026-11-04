@@ -69,8 +69,15 @@ extension ClipboardItem {
     /// rich-text item, because targets like Google Docs take only the files when offered
     /// both. `markTransient` tags the payload so clipboard managers (including our own
     /// `ClipboardMonitor`) don't record the combination.
-    static func combinedPasteboardItems(_ items: [ClipboardItem], markTransient: Bool = true) -> [NSPasteboardItem] {
-        var result = isRichTextMix(items) ? [richTextPasteboardItem(items)] : fileAndTextPasteboardItems(items)
+    /// - Parameter text: the text written for a text/link item (paste transforms hook in here).
+    static func combinedPasteboardItems(
+        _ items: [ClipboardItem],
+        markTransient: Bool = true,
+        text: (ClipboardItem) -> String = { $0.contentText ?? $0.preview }
+    ) -> [NSPasteboardItem] {
+        var result = isRichTextMix(items)
+            ? [richTextPasteboardItem(items, text: text)]
+            : fileAndTextPasteboardItems(items, text: text)
         if markTransient {
             result.first?.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
         }
@@ -87,7 +94,7 @@ extension ClipboardItem {
     /// Text and images interleaved in selection order as HTML (images inlined as data
     /// URIs, for web editors), RTFD (images as attachments, for Pages/Notes/TextEdit),
     /// and plain text as a last resort.
-    private static func richTextPasteboardItem(_ items: [ClipboardItem]) -> NSPasteboardItem {
+    private static func richTextPasteboardItem(_ items: [ClipboardItem], text textFor: (ClipboardItem) -> String) -> NSPasteboardItem {
         var html = ""
         let attributed = NSMutableAttributedString()
         var plain: [String] = []
@@ -99,7 +106,7 @@ extension ClipboardItem {
             }
             switch item.type {
             case .text, .richText, .link:
-                let text = item.contentText ?? item.preview
+                let text = textFor(item)
                 plain.append(text)
                 let escaped = htmlEscaped(text).replacingOccurrences(of: "\n", with: "<br>")
                 if item.type == .link {
@@ -138,10 +145,10 @@ extension ClipboardItem {
             .replacingOccurrences(of: "\"", with: "&quot;")
     }
 
-    private static func fileAndTextPasteboardItems(_ items: [ClipboardItem]) -> [NSPasteboardItem] {
+    private static func fileAndTextPasteboardItems(_ items: [ClipboardItem], text textFor: (ClipboardItem) -> String) -> [NSPasteboardItem] {
         let text = items
             .filter { [.text, .richText, .link].contains($0.type) }
-            .map { $0.contentText ?? $0.preview }
+            .map(textFor)
             .joined(separator: "\n")
         let urls: [URL] = items.flatMap { item -> [URL] in
             switch item.type {

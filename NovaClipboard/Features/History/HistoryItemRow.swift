@@ -10,6 +10,8 @@ struct HistoryItemRow: View {
     var quickPasteIndex: Int?
     /// Modifier symbol prefix for the quick-paste badge (e.g. `⌥⌘`). When nil/empty the badge is hidden.
     var quickPasteSymbols: String? = nil
+    /// Names of the paste transforms that change this item when pasted; nil when none do.
+    var transformedBy: [String]? = nil
     var onTogglePin: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
 
@@ -32,9 +34,17 @@ struct HistoryItemRow: View {
                 Text(item.preview)
                     .lineLimit(2)
                     .font(item.type == .text ? .body : .body.monospaced())
-                Text(Self.relativeFormatter.localizedString(for: item.createdAt, relativeTo: Date()))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                HStack(spacing: 4) {
+                    Text(Self.relativeFormatter.localizedString(for: item.createdAt, relativeTo: Date()))
+                        .foregroundStyle(.tertiary)
+                    if let transformedBy {
+                        Image(systemName: "wand.and.stars")
+                            .foregroundStyle(Color.accentColor)
+                            .help(String(localized: "Pasted transformed by: \(transformedBy.joined(separator: ", ")). ⌥↵ pastes the original."))
+                            .accessibilityLabel(String(localized: "Transformed on paste"))
+                    }
+                }
+                .font(.caption2)
             }
             Spacer(minLength: 0)
 

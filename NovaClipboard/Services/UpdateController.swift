@@ -8,8 +8,14 @@ final class UpdateController: NSObject {
     private let controller: SPUStandardUpdaterController
 
     override init() {
+        #if DEBUG
+        // A debug build must not offer to replace itself with the published release.
+        let startingUpdater = false
+        #else
+        let startingUpdater = true
+        #endif
         controller = SPUStandardUpdaterController(
-            startingUpdater: true,
+            startingUpdater: startingUpdater,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )

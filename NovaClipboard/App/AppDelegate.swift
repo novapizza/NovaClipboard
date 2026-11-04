@@ -71,7 +71,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private func setupModelContainer() {
         let schema = Schema([ClipboardItem.self])
+        #if DEBUG
+        // The legacy default.store belongs to the release build; a debug build copying and
+        // retiring it would leave the release build with an empty history.
+        let migrated = false
+        #else
         let migrated = HistoryStoreLocation.migrateLegacyStoreIfNeeded()
+        #endif
         do {
             let container: ModelContainer
             do {
@@ -205,14 +211,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             settings: settings,
             onOpenSettings: { [weak self] in self?.openSettings() },
             onOpenAccessibility: { [weak self] in self?.openAccessibilityPermission() },
-            onPaste: { [weak self] items in
+            onPaste: { [weak self] items, original in
                 guard let self else { return }
                 let target = self.panelController?.frontmostAppBeforeShow
                 appLogger.info("AppDelegate.onPaste fired, target=\(target?.bundleIdentifier ?? "nil", privacy: .public)")
                 self.pasteEngine.paste(
                     items: items,
                     toApp: target,
-                    restoreClipboard: self.settings.restoreClipboardAfterPaste
+                    restoreClipboard: self.settings.restoreClipboardAfterPaste,
+                    transforms: original ? [] : self.settings.pasteTransforms
                 )
             }
         )
@@ -231,6 +238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                     return
                 }
                 self.historyStore?.insert(item)
+                self.applyCopyTransforms(to: item)
             }
         }
         monitor.maxImageBytes = { [weak self] in
@@ -238,6 +246,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         monitor.start()
         clipboardMonitor = monitor
+    }
+
+    /// Rewrites the clipboard with the result of the "apply on copy" transforms, so a plain ⌘V
+    /// anywhere pastes it. History keeps the original (⌥↵ in the panel pastes it). The new
+    /// payload is plain text only — any rich formatting can't be transformed safely — and is
+    /// marked transient so the monitor doesn't record it as another item.
+    private func applyCopyTransforms(to item: ClipboardItem) {
+        guard item.isTransformable, let original = item.contentText,
+              let monitor = clipboardMonitor else { return }
+        let result = PasteTransformer.onCopy(settings.pasteTransforms).apply(to: original, targetBundleID: nil)
+        guard result.isChanged else { return }
+        let pasteboard = NSPasteboard.general
+        // The user may already have copied something else.
+        guard pasteboard.changeCount == monitor.lastChangeCount else {
+            appLogger.info("Skipped copy transforms: the clipboard changed again")
+            return
+        }
+        pasteboard.clearContents()
+        pasteboard.setString(result.text, forType: .string)
+        pasteboard.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
+        appLogger.info("Rewrote the clipboard with copy transforms: \(result.appliedRules.joined(separator: ", "), privacy: .public)")
     }
 
     private func setupScreenshotWatcher() {
@@ -413,7 +442,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         pasteEngine.paste(
             item: items[index],
             toApp: target,
-            restoreClipboard: settings.restoreClipboardAfterPaste
+            restoreClipboard: settings.restoreClipboardAfterPaste,
+            transforms: settings.pasteTransforms
         )
     }
 
