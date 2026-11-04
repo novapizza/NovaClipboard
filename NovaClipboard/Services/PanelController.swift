@@ -181,6 +181,7 @@ final class PanelController {
             defer: false
         )
         panel.previewController = previewController
+        previewController.hostWindow = panel
         panel.hasShadow = true
         panel.isFloatingPanel = true
         panel.level = .floating
@@ -214,11 +215,19 @@ final class PanelController {
             // Skip hide while a dialog owns focus, otherwise the dialog loses its
             // parent and the UI breaks. confirmationDialog is a window-attached sheet
             // (never sets NSApp.modalWindow), so check attachedSheet as well.
-            // Clicking into Quick Look (e.g. its full-screen button) moves key there; keep
-            // the history panel up so the preview keeps its controller.
-            if self?.previewController.isVisible == true { return }
             if NSApp.modalWindow != nil || self?.panel?.attachedSheet != nil { return }
-            self?.hide()
+            guard self?.previewController.isVisible == true else {
+                self?.hide()
+                return
+            }
+            // With Quick Look open, key may only be moving to the preview (opening it, or a
+            // click on its full-screen button); `ItemPreviewController` hands it back. The new
+            // key window is known once this resign finishes, so decide then.
+            DispatchQueue.main.async {
+                guard let self, let panel = self.panel, panel.isVisible, !panel.isKeyWindow,
+                      !self.previewController.isHoldingKeyTemporarily else { return }
+                self.hide()
+            }
         }
         return panel
     }

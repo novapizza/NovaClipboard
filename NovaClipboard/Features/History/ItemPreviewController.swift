@@ -11,10 +11,29 @@ private let previewLogger = Logger(subsystem: "io.haunc.NovaClipboard", category
 ///
 /// `HistoryPanel` takes panel control through the responder chain and hands it this object
 /// as data source; the history panel stays key so ↑↓ keep moving the selection.
+///
+/// The history panel is a non-activating panel, so NovaClipboard is never the active app and
+/// only that panel can take keystrokes while another app is frontmost. Quick Look's panel
+/// can't: whenever it becomes key (on open, or when clicked), keyboard input falls through to
+/// the frontmost app and Space types into the user's document instead of closing the preview.
+/// So key focus is handed straight back to `hostWindow` — after the mouse is released, so a
+/// click on Quick Look's own controls (full screen, …) still completes.
 @MainActor
 final class ItemPreviewController: NSObject {
     private var previewItems: [PreviewItem] = []
     private var currentItemID: UUID?
+    private var keyReturnTimer: Timer?
+
+    /// The history panel, which keeps key focus while the preview is open.
+    weak var hostWindow: NSWindow?
+
+    override init() {
+        super.init()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(previewWindowDidBecomeKey(_:)),
+            name: NSWindow.didBecomeKeyNotification, object: nil
+        )
+    }
 
     private static var tempDirectory: URL {
         FileManager.default.temporaryDirectory
@@ -48,12 +67,49 @@ final class ItemPreviewController: NSObject {
     }
 
     func close() {
+        cancelKeyReturn()
         if isVisible {
             QLPreviewPanel.shared().orderOut(nil)
         }
         previewItems = []
         currentItemID = nil
         try? FileManager.default.removeItem(at: Self.tempDirectory)
+    }
+
+    /// True when Quick Look holds key focus the history panel will take back once the mouse
+    /// is released, i.e. focus hasn't actually left NovaClipboard.
+    var isHoldingKeyTemporarily: Bool {
+        QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isKeyWindow
+    }
+
+    // MARK: - Key focus
+
+    @objc private func previewWindowDidBecomeKey(_ note: Notification) {
+        guard note.object is QLPreviewPanel, isVisible else { return }
+        previewLogger.debug("Quick Look became key; returning key focus to the history panel")
+        returnKeyToHost()
+    }
+
+    private func returnKeyToHost() {
+        cancelKeyReturn()
+        // Taking key mid-click would cut off the click on Quick Look's controls; wait for the
+        // release. Polled because a control's tracking loop swallows the mouse-up event.
+        guard NSEvent.pressedMouseButtons == 0 else {
+            keyReturnTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard NSEvent.pressedMouseButtons == 0 else { return }
+                    self?.returnKeyToHost()
+                }
+            }
+            return
+        }
+        guard isVisible, let host = hostWindow, host.isVisible else { return }
+        host.makeKey()
+    }
+
+    private func cancelKeyReturn() {
+        keyReturnTimer?.invalidate()
+        keyReturnTimer = nil
     }
 
     // MARK: - Panel control (called by `HistoryPanel`)
@@ -123,6 +179,18 @@ extension ItemPreviewController: QLPreviewPanelDataSource, QLPreviewPanelDelegat
 
     nonisolated func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
         MainActor.assumeIsolated { previewItems[index] }
+    }
+
+    /// Should Quick Look still receive a key press (focus not yet returned), hand it to the
+    /// history panel so Space, Esc and ↑↓ behave the same as when that panel is key.
+    nonisolated func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
+        guard event.type == .keyDown else { return false }
+        return MainActor.assumeIsolated {
+            guard let host = hostWindow, host.isVisible else { return false }
+            host.makeKey()
+            host.sendEvent(event)
+            return true
+        }
     }
 }
 
