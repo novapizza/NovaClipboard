@@ -1,8 +1,28 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "$0 inserts the whole match, $1 the first capture group." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "$0 chèn toàn bộ đoạn khớp, $1 chèn nhóm bắt đầu tiên."
+          }
+        }
+      }
+    },
     "%@" : {
 
+    },
+    "%@ · ⌥↵ pastes the original" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · ⌥↵ để paste bản gốc"
+          }
+        }
+      }
     },
     "%@%@" : {
       "localizations" : {
@@ -25,6 +45,16 @@
         }
       }
     },
+    "%lld characters" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ký tự"
+          }
+        }
+      }
+    },
     "%lld items" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -32,6 +62,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld mục"
+          }
+        }
+      }
+    },
+    "%lld lines" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dòng"
+          }
+        }
+      }
+    },
+    "+%lld more" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld mục khác"
+          }
+        }
+      }
+    },
+    "0.5 s" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0,5 giây"
+          }
+        }
+      }
+    },
+    "1 s" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 giây"
+          }
+        }
+      }
+    },
+    "2 s" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 giây"
           }
         }
       }
@@ -119,6 +199,16 @@
         }
       }
     },
+    "Action" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hành động"
+          }
+        }
+      }
+    },
     "Add" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -126,6 +216,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Thêm"
+          }
+        }
+      }
+    },
+    "Add App…" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm ứng dụng…"
+          }
+        }
+      }
+    },
+    "Add Rule" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm rule"
+          }
+        }
+      }
+    },
+    "Any app" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mọi ứng dụng"
+          }
+        }
+      }
+    },
+    "Apply as soon as text is copied" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Áp dụng ngay khi copy"
+          }
+        }
+      }
+    },
+    "Apply when pasting into" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Áp dụng khi paste vào"
           }
         }
       }
@@ -288,6 +428,16 @@
         }
       }
     },
+    "Collapse repeated spaces" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gộp các dấu cách liên tiếp"
+          }
+        }
+      }
+    },
     "Continue" : {
       "localizations" : {
         "vi" : {
@@ -373,6 +523,36 @@
         }
       }
     },
+    "Edit" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa"
+          }
+        }
+      }
+    },
+    "Edit Rule" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa rule"
+          }
+        }
+      }
+    },
+    "Enter a pattern" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhập biểu thức"
+          }
+        }
+      }
+    },
     "Export Diagnostics" : {
       "localizations" : {
         "vi" : {
@@ -447,6 +627,26 @@
         }
       }
     },
+    "Hover preview" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xem nhanh khi rê chuột"
+          }
+        }
+      }
+    },
+    "Ignore case" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không phân biệt hoa thường"
+          }
+        }
+      }
+    },
     "Image" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -454,6 +654,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hình ảnh"
+          }
+        }
+      }
+    },
+    "Invalid regular expression" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biểu thức chính quy không hợp lệ"
           }
         }
       }
@@ -512,6 +722,26 @@
         }
       }
     },
+    "Lowercase" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viết thường"
+          }
+        }
+      }
+    },
+    "Lowercase email addresses" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viết thường địa chỉ email"
+          }
+        }
+      }
+    },
     "Max image size: %@ MB" : {
 
     },
@@ -540,12 +770,52 @@
         }
       }
     },
+    "Name" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tên"
+          }
+        }
+      }
+    },
+    "New Rule" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule mới"
+          }
+        }
+      }
+    },
+    "New Rule…" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule mới…"
+          }
+        }
+      }
+    },
     "No blocked apps" : {
       "localizations" : {
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Không có ứng dụng bị chặn"
+          }
+        }
+      }
+    },
+    "No rules yet. Add one, or start from a preset." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa có rule nào. Hãy thêm mới hoặc bắt đầu từ một mẫu có sẵn."
           }
         }
       }
@@ -616,6 +886,26 @@
         }
       }
     },
+    "Off" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tắt"
+          }
+        }
+      }
+    },
+    "Only these apps" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ các ứng dụng này"
+          }
+        }
+      }
+    },
     "Open System Settings" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -681,12 +971,42 @@
         }
       }
     },
+    "Pasted transformed by: %@. ⌥↵ pastes the original." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Được biến đổi khi paste bởi: %@. ⌥↵ để paste bản gốc."
+          }
+        }
+      }
+    },
+    "Pastes as" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sẽ paste thành"
+          }
+        }
+      }
+    },
     "Pasting won't work until access is granted. Click to fix." : {
       "localizations" : {
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Không thể dán cho đến khi được cấp quyền. Bấm để khắc phục."
+          }
+        }
+      }
+    },
+    "Pattern (regular expression)" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biểu thức (regular expression)"
           }
         }
       }
@@ -843,6 +1163,36 @@
         }
       }
     },
+    "Remove" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa"
+          }
+        }
+      }
+    },
+    "Replace with" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thay bằng"
+          }
+        }
+      }
+    },
+    "Replacement" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thay thế bằng"
+          }
+        }
+      }
+    },
     "Restart Now" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -875,6 +1225,16 @@
         }
       }
     },
+    "Result" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết quả"
+          }
+        }
+      }
+    },
     "Retention" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -882,6 +1242,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Thời gian lưu"
+          }
+        }
+      }
+    },
+    "Rewrite text as it's pasted, e.g. uppercase every UUID. Rules run top to bottom. History keeps the original, and ⌥↵ or ⌥-click pastes it unchanged." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biến đổi văn bản khi paste, ví dụ viết hoa mọi UUID. Các rule chạy lần lượt từ trên xuống. Lịch sử vẫn giữ bản gốc, và ⌥↵ hoặc ⌥-click sẽ paste nguyên bản."
+          }
+        }
+      }
+    },
+    "Sample text" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Văn bản mẫu"
+          }
+        }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lưu"
           }
         }
       }
@@ -971,6 +1361,16 @@
         }
       }
     },
+    "Show an item's full content beside the panel after resting the mouse on it. Space opens Quick Look either way." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiện toàn bộ nội dung của một mục bên cạnh bảng khi giữ chuột trên mục đó. Phím Space vẫn mở Quick Look như thường."
+          }
+        }
+      }
+    },
     "Show panel hotkey" : {
       "localizations" : {
         "vi" : {
@@ -1014,6 +1414,46 @@
         }
       }
     },
+    "Transformed on paste" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Được biến đổi khi paste"
+          }
+        }
+      }
+    },
+    "Transforms" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biến đổi"
+          }
+        }
+      }
+    },
+    "Trim leading and trailing whitespace" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bỏ khoảng trắng ở đầu và cuối"
+          }
+        }
+      }
+    },
+    "Try it" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thử nghiệm"
+          }
+        }
+      }
+    },
     "Unpin" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1032,6 +1472,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bỏ ghim mục"
+          }
+        }
+      }
+    },
+    "Uppercase" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viết hoa"
+          }
+        }
+      }
+    },
+    "Uppercase UUIDs" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viết hoa UUID"
           }
         }
       }
@@ -1083,6 +1543,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Khi tắt, mục vừa dán vẫn nằm trong clipboard để ⌘V dán lại. Khi bật, clipboard trước đó được khôi phục ngay sau khi dán."
+          }
+        }
+      }
+    },
+    "on copy" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "khi copy"
+          }
+        }
+      }
+    },
+    "⌘V anywhere pastes the result, not just pasting from NovaClipboard. The clipboard then holds plain text only; the original stays in history (⌥↵ pastes it)." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘V ở bất kỳ đâu cũng paste kết quả, không chỉ khi paste từ NovaClipboard. Khi đó clipboard chỉ còn văn bản thuần; bản gốc vẫn nằm trong lịch sử (⌥↵ để paste bản gốc)."
           }
         }
       }

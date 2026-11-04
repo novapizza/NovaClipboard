@@ -19,7 +19,9 @@ final class ClipboardMonitor {
     private let pasteboard: NSPasteboard
     private let pollInterval: TimeInterval
     private var timer: Timer?
-    private var lastChangeCount: Int
+    /// The pasteboard change last read; compare before rewriting the pasteboard so a newer
+    /// copy is never overwritten.
+    private(set) var lastChangeCount: Int
     /// When the pasteboard last changed under a running poll; surfaced by Export Diagnostics.
     private(set) var lastChangeAt: Date?
 

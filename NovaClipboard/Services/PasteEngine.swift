@@ -14,14 +14,30 @@ final class PasteEngine {
     /// - Parameter restoreClipboard: when true, the pre-paste pasteboard is restored
     ///   after `restoreDelay`. When false, the pasted item stays on the clipboard so a
     ///   follow-up ⌘V pastes the same item again (Spec §3.3 step 5 is optional).
-    func paste(item: ClipboardItem, toApp app: NSRunningApplication?, restoreClipboard: Bool) {
-        paste(items: [item], toApp: app, restoreClipboard: restoreClipboard)
+    func paste(item: ClipboardItem, toApp app: NSRunningApplication?, restoreClipboard: Bool,
+               transforms: [PasteTransform] = []) {
+        paste(items: [item], toApp: app, restoreClipboard: restoreClipboard, transforms: transforms)
     }
 
     /// Pastes several items with a single ⌘V: text/links are joined with newlines and
     /// images/files go up as file URLs (see `ClipboardItem.combinedPasteboardItems`).
-    func paste(items: [ClipboardItem], toApp app: NSRunningApplication?, restoreClipboard: Bool) {
+    ///
+    /// `transforms` rewrite text/link content on its way to the pasteboard (history keeps the
+    /// original). A rewritten payload is marked transient so `ClipboardMonitor` doesn't record
+    /// it as a new history item.
+    func paste(items: [ClipboardItem], toApp app: NSRunningApplication?, restoreClipboard: Bool,
+               transforms: [PasteTransform] = []) {
         guard !items.isEmpty else { return }
+        let transformer = PasteTransformer(rules: transforms)
+        let target = app?.bundleIdentifier
+        var transformed = false
+        let textFor: (ClipboardItem) -> String = { item in
+            let original = item.contentText ?? item.preview
+            guard item.isTransformable else { return original }
+            let result = transformer.apply(to: original, targetBundleID: target)
+            transformed = transformed || result.isChanged
+            return result.text
+        }
         logger.info("paste() called for \(items.count, privacy: .public) item(s), first type=\(items[0].type.rawValue, privacy: .public), targetApp=\(app?.bundleIdentifier ?? "nil", privacy: .public), restore=\(restoreClipboard, privacy: .public)")
 
         let pasteboard = NSPasteboard.general
@@ -29,14 +45,17 @@ final class PasteEngine {
         pasteboard.clearContents()
 
         if items.count > 1 {
-            let combined = ClipboardItem.combinedPasteboardItems(items)
+            let combined = ClipboardItem.combinedPasteboardItems(items, text: textFor)
             guard !combined.isEmpty else {
                 logger.error("paste() aborted: no content in selected items")
                 return
             }
             pasteboard.writeObjects(combined)
         } else {
-            guard write(items[0], to: pasteboard) else { return }
+            guard write(items[0], to: pasteboard, text: textFor) else { return }
+            if transformed {
+                pasteboard.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.TransientType"))
+            }
         }
 
         guard ensureAccessibilityTrusted() else {
@@ -59,15 +78,14 @@ final class PasteEngine {
     }
 
     /// Writes a single item's payload. Returns false when the item has no usable content.
-    private func write(_ item: ClipboardItem, to pasteboard: NSPasteboard) -> Bool {
-
+    private func write(_ item: ClipboardItem, to pasteboard: NSPasteboard, text: (ClipboardItem) -> String) -> Bool {
         switch item.type {
         case .text, .richText, .link:
-            guard let content = item.contentText else {
+            guard item.contentText != nil else {
                 logger.error("paste() aborted: contentText nil for text/link item")
                 return false
             }
-            pasteboard.setString(content, forType: .string)
+            pasteboard.setString(text(item), forType: .string)
 
         case .image:
             // ClipboardMonitor + screenshot ingestion normalize image bytes to PNG before storage,

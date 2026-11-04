@@ -35,21 +35,27 @@ struct HistoryPanelView: View {
     }
 
     let store: HistoryStore
-    let onPaste: ([ClipboardItem]) -> Void
+    /// Second argument: paste the original text, skipping paste transforms (⌥↵ / ⌥-click).
+    let onPaste: ([ClipboardItem], Bool) -> Void
     let onDismiss: () -> Void
     let onTogglePreview: (ClipboardItem) -> Void
     let onSelectionChanged: (ClipboardItem?) -> Void
+    /// The row under the mouse changed (nil: none); drives the hover card.
+    let onHoverChanged: (ClipboardItem?) -> Void
     @ObservedObject var presentation: PanelPresentation
+    let transformPreview: PasteTransformPreview
     let onOpenSettings: () -> Void
     let onOpenAccessibility: () -> Void
 
     init(
         store: HistoryStore,
-        onPaste: @escaping ([ClipboardItem]) -> Void,
+        onPaste: @escaping ([ClipboardItem], Bool) -> Void,
         onDismiss: @escaping () -> Void,
         onTogglePreview: @escaping (ClipboardItem) -> Void,
         onSelectionChanged: @escaping (ClipboardItem?) -> Void,
+        onHoverChanged: @escaping (ClipboardItem?) -> Void,
         presentation: PanelPresentation,
+        transformPreview: PasteTransformPreview,
         onOpenSettings: @escaping () -> Void,
         onOpenAccessibility: @escaping () -> Void
     ) {
@@ -58,7 +64,9 @@ struct HistoryPanelView: View {
         self.onDismiss = onDismiss
         self.onTogglePreview = onTogglePreview
         self.onSelectionChanged = onSelectionChanged
+        self.onHoverChanged = onHoverChanged
         self.presentation = presentation
+        self.transformPreview = transformPreview
         self.onOpenSettings = onOpenSettings
         self.onOpenAccessibility = onOpenAccessibility
 
@@ -122,6 +130,7 @@ struct HistoryPanelView: View {
         }))
         .onAppear { ensureSelection() }
         .onChange(of: visibleIDs) { _, _ in ensureSelection() }
+        .onChange(of: hoveredID) { _, _ in onHoverChanged(hoveredItem()) }
         // The view outlives each show, so a selection left over from a dismissed panel
         // must not come back next time.
         .onChange(of: presentation.showCount) { _, _ in
@@ -375,6 +384,11 @@ struct HistoryPanelView: View {
                 multiSelectIndex: multiSelection.firstIndex(of: item.persistentModelID),
                 quickPasteIndex: quickIdx,
                 quickPasteSymbols: quickPasteSymbols,
+                transformedBy: transformPreview.result(
+                    for: item,
+                    rules: settings.pasteTransforms,
+                    targetBundleID: presentation.targetBundleID
+                )?.appliedRules,
                 onTogglePin: { store.togglePin(item) },
                 onDelete: { store.delete(item) }
             )
@@ -425,9 +439,9 @@ struct HistoryPanelView: View {
         if NSEvent.modifierFlags.contains(.shift) {
             toggleMultiSelection(id)
         } else if multiSelection.isEmpty {
-            onPaste([item])
+            onPaste([item], NSEvent.modifierFlags.contains(.option))
         } else if multiSelection.contains(id) {
-            pasteMultiSelection()
+            pasteMultiSelection(original: NSEvent.modifierFlags.contains(.option))
         } else {
             multiSelection = []
         }
@@ -457,11 +471,11 @@ struct HistoryPanelView: View {
         return multiSelection.compactMap { byID[$0] }
     }
 
-    private func pasteMultiSelection() {
+    private func pasteMultiSelection(original: Bool) {
         let items = multiSelectedItems()
         multiSelection = []
         guard !items.isEmpty else { return }
-        onPaste(items)
+        onPaste(items, original)
     }
 
     /// Dragging a picked row drags the whole selection; any other row drags alone.
@@ -499,13 +513,14 @@ struct HistoryPanelView: View {
         selectedID = items[next].persistentModelID
     }
 
-    private func confirmSelection() {
+    /// - Parameter original: ⌥↵ pastes the original text, skipping paste transforms.
+    private func confirmSelection(original: Bool) {
         if !multiSelection.isEmpty {
-            pasteMultiSelection()
+            pasteMultiSelection(original: original)
             return
         }
         guard let item = currentItem() else { return }
-        onPaste([item])
+        onPaste([item], original)
     }
 
     /// Esc clears a multi-selection before it dismisses the panel.
@@ -521,7 +536,7 @@ struct HistoryPanelView: View {
         // index is 0..8 (⌘1..⌘9). Maps to the visible row in order (pinned first, then recent).
         let items = visibleItems
         guard index < items.count else { return }
-        onPaste([items[index]])
+        onPaste([items[index]], false)
     }
 
     private func togglePinSelected() {
@@ -674,7 +689,8 @@ struct KeyActions {
     var onMoveDown: () -> Void
     var onExtendUp: () -> Void
     var onExtendDown: () -> Void
-    var onConfirm: () -> Void
+    /// True when ⌥ is held: paste the original, skipping paste transforms.
+    var onConfirm: (Bool) -> Void
     var onCancel: () -> Void
     /// True when ⇧ is the only modifier held.
     var onShiftChange: (Bool) -> Void
@@ -737,7 +753,7 @@ private final class KeyCaptureView: NSView {
         switch Int(event.keyCode) {
         case 126: shift ? actions.onExtendUp() : actions.onMoveUp()
         case 125: shift ? actions.onExtendDown() : actions.onMoveDown()
-        case 36, 76: actions.onConfirm()
+        case 36, 76: actions.onConfirm(mods.contains(.option))
         case 53: actions.onCancel()
         case 49 where mods.isEmpty: actions.onPreview() // space
         case 51: // delete/backspace

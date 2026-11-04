@@ -18,6 +18,8 @@ struct SettingsView: View {
                     .tabItem { Label("General", systemImage: "gearshape") }
                 HistoryTab(settings: settings)
                     .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                PasteTransformsTab(settings: settings)
+                    .tabItem { Label("Transforms", systemImage: "wand.and.stars") }
                 PrivacyTab(settings: settings)
                     .tabItem { Label("Privacy", systemImage: "lock.shield") }
                 AboutTab()
@@ -79,6 +81,15 @@ private struct GeneralTab: View {
 
             Toggle("Auto-hide header and shortcut bar", isOn: $settings.autoHidePanelChrome)
                 .help("Keeps the panel to just the list. The shortcut bar appears while you hold ⇧ to select multiple items or drag one. Clear All and Settings stay in the menu-bar menu.")
+
+            Picker(selection: $settings.hoverPreviewDelay) {
+                ForEach(HoverPreviewDelay.allCases) { delay in
+                    Text(delay.displayName).tag(delay)
+                }
+            } label: {
+                LabelWithInfo("Hover preview",
+                              info: "Show an item's full content beside the panel after resting the mouse on it. Space opens Quick Look either way.")
+            }
 
             Picker("Panel position", selection: $settings.panelPosition) {
                 Text("At caret").tag(PanelPositionPreference.atCaret)
